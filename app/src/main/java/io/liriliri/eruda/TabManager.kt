@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages multiple browser tabs, handling creation, removal, and switching.
  */
 class TabManager(private val webViewFactory: () -> WebView) {
+    var onPageStarted: ((WebView, String) -> Unit)? = null
+    var onPageFinished: ((WebView, String) -> Unit)? = null
+    var onProgressChanged: ((WebView, Int) -> Unit)? = null
     
     private val _tabs = MutableStateFlow<List<Tab>>(emptyList())
     val tabs: StateFlow<List<Tab>> = _tabs.asStateFlow()
