@@ -30,6 +30,30 @@ fun BrowserScreen(
         }
     }
     
+    LaunchedEffect(tabManager) {
+	    tabManager.onPageStarted = { view, url ->
+	        val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+	        if (tabIndex == tabManager.activeTabIndex.value) {
+	            viewModel.setLoading(true)
+	            viewModel.updateCurrentUrl(url)
+	        }
+	    }
+	    
+	    tabManager.onPageFinished = { view, url ->
+	        val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+	        if (tabIndex == tabManager.activeTabIndex.value) {
+	            viewModel.setLoading(false)
+	        }
+	    }
+	    
+	    tabManager.onProgressChanged = { view, progress ->
+	        val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+	        if (tabIndex == tabManager.activeTabIndex.value) {
+	            viewModel.setLoadingProgress(progress)
+	        }
+	    }
+	}
+    
     Column(modifier = Modifier.fillMaxSize()) {
         BrowserToolbar(
             currentUrl = currentUrl,
