@@ -13,40 +13,29 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.util.Log
-import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.webkit.*
 import android.widget.EditText
-import android.widget.ImageView
-import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebViewFeature
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.UnsupportedEncodingException
 import java.net.URLEncoder
 
-// https://github.com/mengkunsoft/MkBrowser
 class MainActivity : AppCompatActivity() {
-    private lateinit var webView: WebView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var textUrl: EditText
-    private lateinit var btnStart: ImageView
-    private lateinit var btnGoBack: ImageView
-    private lateinit var btnGoForward: ImageView
-    private lateinit var favicon: ImageView
-    private lateinit var manager: InputMethodManager
+    private lateinit var tabManager: TabManager
     private val TAG = "Eruda.MainActivity"
     var mFilePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileUrl: String? = null
@@ -57,11 +46,9 @@ class MainActivity : AppCompatActivity() {
     private val consoleLogs = mutableListOf<Map<String, String>>()
 
     // Feature 2: local cache for the eruda script (avoids re-downloading on each page load).
-    // The explicit /eruda.js path is used so jsDelivr returns the JS directly without a redirect.
     private val ERUDA_CDN_URL = "https://cdn.jsdelivr.net/npm/eruda/eruda.js"
     private val CACHE_MAX_AGE_MS = 7 * 24 * 3600 * 1000L  // 7 days
     private val erudaScriptCacheFile: File by lazy { File(filesDir, "eruda_cache.js") }
-    // Shared OkHttpClient for eruda script downloads (reuses connection pool).
     private val httpClient = OkHttpClient()
 
     /** JavaScript-to-Android bridge exposed as `window.ErudaAndroid`. */
@@ -97,7 +84,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** True while waiting for the user to return from the "All Files Access" settings screen. */
     private var pendingAllFilesAccess = false
 
     private val storagePermissionLauncher =
@@ -105,93 +91,43 @@ class MainActivity : AppCompatActivity() {
             val url = pendingFileUrl
             pendingFileUrl = null
             if (granted && url != null) {
-                webView.loadUrl(url)
+                tabManager.activeTab?.webView?.loadUrl(url)
             } else if (url != null) {
                 Toast.makeText(this, R.string.storage_permission_denied, Toast.LENGTH_SHORT).show()
             }
         }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        // Initialize tab manager with WebView factory
+        tabManager = TabManager { createConfiguredWebView() }
 
-        manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-
-        initView()
-        initWebView()
-    }
-
-    private fun initView() {
-        webView = findViewById(R.id.webView)
-        progressBar = findViewById(R.id.progressBar)
-        textUrl = findViewById(R.id.textUrl)
-        favicon = findViewById(R.id.webIcon)
-        btnStart = findViewById(R.id.btnStart)
-        btnGoBack = findViewById(R.id.goBack)
-        btnGoForward = findViewById(R.id.goForward)
-
-        btnStart.setOnClickListener {
-            if (textUrl.hasFocus()) {
-                if (manager.isActive) {
-                    manager.hideSoftInputFromWindow(textUrl.applicationWindowToken, 0)
-                }
-                var input = textUrl.text.toString()
-                if (!isHttpUrl(input) && !isFileUrl(input)) {
-                    if (mayBeUrl(input)) {
-                        input = "https://${input}"
-                    } else {
-                        try {
-                            input = URLEncoder.encode(input, "utf-8")
-                        } catch (e: UnsupportedEncodingException) {
-                            Log.e(TAG, e.message.toString())
-                        }
-                        input = "https://www.google.com/search?q=${input}"
-                    }
-                }
-                if (isFileUrl(input)) {
-                    loadFileUrl(input)
-                } else {
-                    webView.loadUrl(input)
-                }
-                textUrl.clearFocus()
+        setContent {
+            val colorScheme = if (getString(R.string.mode) == "night") {
+                darkColorScheme(
+                    background = Color(0xFF121212),
+                    surface = Color(0xFF1E1E1E),
+                    surfaceVariant = Color(0xFF2A2A2A),
+                    onBackground = Color.White,
+                    onSurface = Color.White,
+                    onSurfaceVariant = Color(0xFFB0B0B0)
+                )
             } else {
-                webView.reload()
+                lightColorScheme()
             }
-        }
-
-        btnGoBack.setOnClickListener {
-            webView.goBack()
-        }
-
-        btnGoForward.setOnClickListener {
-            webView.goForward()
-        }
-
-        textUrl.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                textUrl.setText(webView.url)
-                textUrl.setSelection(textUrl.text.length)
-                btnStart.setImageResource(R.drawable.arrow_right)
-            } else {
-                textUrl.setText(webView.title)
-                btnStart.setImageResource(R.drawable.refresh)
+            
+            MaterialTheme(colorScheme = colorScheme) {
+                BrowserScreen(tabManager)
             }
-        }
-        textUrl.setOnKeyListener { _, keyCode, keyEvent ->
-            if (keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
-                btnStart.callOnClick()
-                textUrl.clearFocus()
-            }
-
-            return@setOnKeyListener false
         }
     }
 
-    @Suppress("DEPRECATION")
-    @SuppressLint("SetJavaScriptEnabled", "RequiresFeature")
-    private fun initWebView() {
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun createConfiguredWebView(): WebView {
+        val webView = WebViewFactory.create(this)
+        
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
                 view: WebView,
@@ -218,13 +154,10 @@ class MainActivity : AppCompatActivity() {
             ): WebResourceResponse? {
                 val url = request.url.toString()
 
-                // Serve file:// URLs via the app process to bypass the WebView renderer
-                // sandbox, which lacks direct access to external storage on Android 10+.
                 if (isFileUrl(url)) {
                     return serveFileUrl(request.url)
                 }
 
-                // Feature 2: serve the eruda script from local cache to avoid re-downloading.
                 if (url.startsWith(ERUDA_CDN_URL)) {
                     return serveCachedErudaScript()
                 }
@@ -244,8 +177,6 @@ class MainActivity : AppCompatActivity() {
                     if (cookie != null) {
                         headers = (headers.toMap() + Pair("cookie", cookie)).toHeaders()
                     }
-                    Log.i(TAG, "Intercept url: $url")
-                    Log.i(TAG, "Request headers: ${headers.toMap()}")
 
                     val client = OkHttpClient.Builder().followRedirects(false).build()
                     val req = Request.Builder()
@@ -260,9 +191,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         val resHeaders =
                             response.headers.toMap().filter { it.key != "content-security-policy" }
-                        Log.i(TAG, "Response headers: $resHeaders")
 
-                        return WebResourceResponse(
+                        WebResourceResponse(
                             "text/html",
                             response.header("content-encoding", "utf-8"),
                             response.code,
@@ -281,20 +211,20 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView?, url: String, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-
-                progressBar.progress = 0
-                progressBar.visibility = View.VISIBLE
-                setTextUrl("Loading...")
-                this@MainActivity.favicon.setImageResource(R.drawable.tool)
+                // Update loading state via ViewModel
             }
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                
+                // Update tab title and URL
+                val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+                if (tabIndex >= 0) {
+                    tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
+                    tabManager.updateTabUrl(tabIndex, url)
+                }
 
-                progressBar.visibility = View.INVISIBLE
-                title = view.title
-                setTextUrl(view.title)
-
+                // Inject Eruda
                 val script = """
                     (function () {
                         if (window.eruda) return;
@@ -312,12 +242,10 @@ class MainActivity : AppCompatActivity() {
                                 window.define = define;
                             }
                             if (window.ErudaAndroid) {
-                                // Capture eruda's already-hooked console methods before our wrapping.
                                 var _eruda = {};
                                 ['log','warn','error','info','debug'].forEach(function(lvl) {
                                     _eruda[lvl] = console[lvl].bind(console);
                                 });
-                                // Wrap each method so new logs are forwarded to Android storage.
                                 ['log','warn','error','info','debug'].forEach(function(lvl) {
                                     (function(l, orig) {
                                         console[l] = function() {
@@ -332,11 +260,6 @@ class MainActivity : AppCompatActivity() {
                                         };
                                     })(lvl, _eruda[lvl]);
                                 });
-                                // Replay persisted logs from previous pages directly into eruda
-                                // via the pre-wrap console references (_eruda) so they appear in
-                                // the UI without going through our persistence wrapper, which
-                                // prevents duplicate entries on subsequent page reloads.
-                                // '\u23f0' (⏰) visually marks replayed historical entries.
                                 try {
                                     var stored = JSON.parse(window.ErudaAndroid.getLogs() || '[]');
                                     stored.forEach(function(entry) {
@@ -354,34 +277,14 @@ class MainActivity : AppCompatActivity() {
                         }
                     })();
                 """
-                webView.evaluateJavascript(script) {}
+                view.evaluateJavascript(script) {}
             }
         }
-
-        val selectFileLauncher =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (mFilePathCallback != null) {
-                    mFilePathCallback!!.onReceiveValue(
-                        WebChromeClient.FileChooserParams.parseResult(
-                            result.resultCode,
-                            result.data
-                        )
-                    )
-                    mFilePathCallback = null
-                }
-            }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
-
-                progressBar.progress = newProgress
-            }
-
-            override fun onReceivedIcon(view: WebView, icon: Bitmap) {
-                super.onReceivedIcon(view, icon)
-
-                favicon.setImageBitmap(icon)
+                // Update progress via ViewModel
             }
 
             override fun onShowFileChooser(
@@ -404,40 +307,28 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        settings.allowFileAccess = true
-        @Suppress("DEPRECATION")
-        settings.allowUniversalAccessFromFileURLs = true
 
-        // Register the Android bridge so JavaScript can call window.ErudaAndroid.*
         webView.addJavascriptInterface(ErudaBridge(), "ErudaAndroid")
+        
+        return webView
+    }
 
-        if (resources.getString(R.string.mode) == "night") {
-            // https://stackoverflow.com/questions/57449900/letting-webview-on-android-work-with-prefers-color-scheme-dark
-            val supportForceDarkStrategy =
-                WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)
-            val supportForceDark = WebViewFeature.isFeatureSupported(
-                WebViewFeature.FORCE_DARK
-            )
-            if (supportForceDarkStrategy && supportForceDark) {
-                WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_ON)
-                WebSettingsCompat.setForceDarkStrategy(
-                    settings,
-                    WebSettingsCompat.DARK_STRATEGY_WEB_THEME_DARKENING_ONLY
+    private val selectFileLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (mFilePathCallback != null) {
+                mFilePathCallback!!.onReceiveValue(
+                    WebChromeClient.FileChooserParams.parseResult(
+                        result.resultCode,
+                        result.data
+                    )
                 )
+                mFilePathCallback = null
             }
         }
-
-        webView.loadUrl("https://github.com/liriliri/eruda")
-    }
 
     private fun serveFileUrl(uri: android.net.Uri): WebResourceResponse? {
         return try {
             val path = uri.path ?: return null
-            // Canonicalize to resolve '..' sequences and prevent path traversal.
             val file = java.io.File(path).canonicalFile
             if (!file.exists() || !file.canRead()) return null
             val ext = file.extension.lowercase()
@@ -463,39 +354,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Feature 2: serve the eruda script from a local cache to avoid re-downloading it on every
-     * page load.  The cache is stored in the app's private files directory and refreshed after
-     * [CACHE_MAX_AGE_MS].  A stale cache is used as a fallback when the network is unavailable.
-     */
     private fun serveCachedErudaScript(): WebResourceResponse? {
         val headers = mapOf("Access-Control-Allow-Origin" to "*")
 
-        // Serve from cache if it exists and is not stale.
         if (erudaScriptCacheFile.exists() &&
             System.currentTimeMillis() - erudaScriptCacheFile.lastModified() < CACHE_MAX_AGE_MS
         ) {
-            Log.i(TAG, "Serving eruda script from cache")
             return WebResourceResponse(
                 "application/javascript", "utf-8", 200, "OK",
                 headers, erudaScriptCacheFile.inputStream()
             )
         }
 
-        // Download from CDN, save to cache, and serve.
-        // Note: shouldInterceptRequest is called on a background thread by WebView, so
-        // blocking network I/O here is safe and does not block the main thread.
-        Log.i(TAG, "Downloading eruda script from CDN")
         return try {
             val req = Request.Builder().url(ERUDA_CDN_URL).build()
             val bytes = httpClient.newCall(req).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Eruda CDN returned HTTP ${response.code} ${response.message}")
                     return@use null
                 }
-                response.body?.bytes().also {
-                    if (it == null) Log.e(TAG, "Empty response body from eruda CDN")
-                }
+                response.body?.bytes()
             } ?: return null
             try {
                 erudaScriptCacheFile.writeBytes(bytes)
@@ -508,15 +385,12 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download eruda script: ${e.message}")
-            // Fall back to a stale cached copy rather than failing completely.
             if (erudaScriptCacheFile.exists()) {
-                Log.i(TAG, "Serving stale eruda script from cache")
                 WebResourceResponse(
                     "application/javascript", "utf-8", 200, "OK",
                     headers, erudaScriptCacheFile.inputStream()
                 )
             } else {
-                Log.e(TAG, "Eruda script unavailable: network error and no local cache")
                 null
             }
         }
@@ -524,11 +398,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadFileUrl(url: String) {
         when {
-            // Android 11+ (API 30+): READ_EXTERNAL_STORAGE no longer covers non-media files
-            // (e.g. HTML, JS, CSS) in shared storage. "All Files Access" is required.
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
                 if (Environment.isExternalStorageManager()) {
-                    webView.loadUrl(url)
+                    tabManager.activeTab?.webView?.loadUrl(url)
                 } else {
                     pendingFileUrl = url
                     Toast.makeText(this, R.string.all_files_access_required, Toast.LENGTH_LONG).show()
@@ -551,58 +423,36 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            // Android 6–10 (API 23–29): use READ_EXTERNAL_STORAGE runtime permission
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                 if (ContextCompat.checkSelfPermission(
                         this, Manifest.permission.READ_EXTERNAL_STORAGE
                     ) == PackageManager.PERMISSION_GRANTED
                 ) {
-                    webView.loadUrl(url)
+                    tabManager.activeTab?.webView?.loadUrl(url)
                 } else {
                     pendingFileUrl = url
                     storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                 }
             }
-            // Below Android 6: no runtime permission needed
-            else -> webView.loadUrl(url)
+            else -> tabManager.activeTab?.webView?.loadUrl(url)
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Retry loading a pending file:// URL when the user returns from the
-        // "All Files Access" settings screen having granted the permission.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pendingAllFilesAccess) {
             pendingAllFilesAccess = false
             val url = pendingFileUrl
             if (url != null && Environment.isExternalStorageManager()) {
                 pendingFileUrl = null
-                webView.loadUrl(url)
+                tabManager.activeTab?.webView?.loadUrl(url)
             }
         }
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            val v = currentFocus
-            if (v is EditText) {
-                val outRect = Rect()
-                v.getGlobalVisibleRect(outRect)
-                if (!outRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
-                    v.clearFocus()
-                    if (manager.isActive) {
-                        manager.hideSoftInputFromWindow(textUrl.applicationWindowToken, 0)
-                    }
-                }
-            }
-        }
+        // Simplified for Compose - keyboard handling is done in Compose
         return super.dispatchTouchEvent(event)
-    }
-
-    private fun setTextUrl(text: String?) {
-        if (!textUrl.hasFocus() && text != null) {
-            textUrl.setText(text)
-        }
     }
 }
 
@@ -616,6 +466,5 @@ fun isFileUrl(url: String): Boolean {
 
 fun mayBeUrl(text: String): Boolean {
     val domains = arrayOf(".com", ".io", ".me", ".org", ".net", ".tv", ".cn")
-
     return domains.any { text.contains(it) }
 }
