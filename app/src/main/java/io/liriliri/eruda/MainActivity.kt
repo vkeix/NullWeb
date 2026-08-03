@@ -211,18 +211,12 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView?, url: String, favicon: Bitmap?) {
 			    super.onPageStarted(view, url, favicon)
-			    
-			    // Find which tab this WebView belongs to
-			    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
-			    if (tabIndex >= 0 && tabIndex == tabManager.activeTabIndex.value) {
-			        // Only update UI if this is the active tab
-			        // We need to pass this to the ViewModel somehow
-			        // For now, we'll use a simpler approach
-			    }
+			    view?.let { tabManager.onPageStarted?.invoke(it, url) }
 			}
 			
 			override fun onPageFinished(view: WebView, url: String) {
 			    super.onPageFinished(view, url)
+			    tabManager.onPageFinished?.invoke(view, url)
 			    
 			    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
 			    if (tabIndex >= 0) {
@@ -289,9 +283,9 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
-                super.onProgressChanged(view, newProgress)
-                // Update progress via ViewModel
-            }
+			    super.onProgressChanged(view, newProgress)
+			    tabManager.onProgressChanged?.invoke(view, newProgress)
+			}
 
             override fun onShowFileChooser(
                 webView: WebView?,
