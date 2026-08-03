@@ -210,20 +210,26 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageStarted(view: WebView?, url: String, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                // Update loading state via ViewModel
-            }
-
-            override fun onPageFinished(view: WebView, url: String) {
-                super.onPageFinished(view, url)
-                
-                // Update tab title and URL
-                val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
-                if (tabIndex >= 0) {
-                    tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
-                    tabManager.updateTabUrl(tabIndex, url)
-                }
-
+			    super.onPageStarted(view, url, favicon)
+			    
+			    // Find which tab this WebView belongs to
+			    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+			    if (tabIndex >= 0 && tabIndex == tabManager.activeTabIndex.value) {
+			        // Only update UI if this is the active tab
+			        // We need to pass this to the ViewModel somehow
+			        // For now, we'll use a simpler approach
+			    }
+			}
+			
+			override fun onPageFinished(view: WebView, url: String) {
+			    super.onPageFinished(view, url)
+			    
+			    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+			    if (tabIndex >= 0) {
+			        tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
+			        tabManager.updateTabUrl(tabIndex, url)
+			    }   
+			
                 // Inject Eruda
                 val script = """
                     (function () {
