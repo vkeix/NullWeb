@@ -4,12 +4,13 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    namespace 'io.liriliri.eruda'
+    compileSdk 34
 
     defaultConfig {
         applicationId "io.liriliri.eruda"
         minSdk 21
-        targetSdk 33
+        targetSdk 34
         versionCode 3
         versionName "1.2.1"
         archivesBaseName = "eruda-v$versionName"
@@ -19,22 +20,24 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // On CI the debug keystore is used so the APK is immediately installable.
-            // Locally, leave unsigned; override with a proper keystore for production.
             if (System.getenv("CI")) {
                 signingConfig signingConfigs.debug
             }
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.14'
     }
 }
 
@@ -44,4 +47,10 @@ dependencies {
     implementation "androidx.core:core-splashscreen:1.0.0"
     implementation 'androidx.webkit:webkit:1.6.1'
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+
+    implementation platform('androidx.compose:compose-bom:2024.02.01')
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
 }
