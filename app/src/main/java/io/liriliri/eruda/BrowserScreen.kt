@@ -34,9 +34,25 @@ fun BrowserScreen(
         BrowserToolbar(
             currentUrl = currentUrl,
             tabCount = tabs.size,
-            onUrlSubmit = { url ->
-                tabManager.activeTab?.webView?.loadUrl(url)
-            },
+            onUrlSubmit = { input ->
+			    var url = input.trim()
+			    
+			    // Check if it's a valid URL or should be a search
+			    if (!isHttpUrl(url) && !isFileUrl(url)) {
+			        if (mayBeUrl(url)) {
+			            url = "https://${url}"
+			        } else {
+			            try {
+			                url = "https://www.google.com/search?q=${URLEncoder.encode(url, "utf-8")}"
+			            } catch (e: Exception) {
+			                Log.e("BrowserScreen", "Failed to encode search query", e)
+			                return@BrowserToolbar
+			            }
+			        }
+			    }
+			    
+			    tabManager.activeTab?.webView?.loadUrl(url)
+			},
             onHomeClick = {
                 tabManager.activeTab?.webView?.loadUrl("https://github.com/liriliri/eruda")
             },
