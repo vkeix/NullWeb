@@ -334,6 +334,10 @@ fun BrowserScreen(
                 tabManager.setDesktopMode(activeTab?.isDesktop != true)
                 viewModel.hideMenu()
             },
+            onToggleDevTools = {
+                tabManager.toggleDevTools()
+                viewModel.hideMenu()
+            },
             onOpenSettings = { viewModel.openPage(BrowserPage.Settings) },
             onBack = {
                 activeTab?.webView?.goBack()
