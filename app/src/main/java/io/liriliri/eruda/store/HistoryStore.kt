@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package io.liriliri.eruda.store
 
 import android.content.Context
 import org.json.JSONArray
