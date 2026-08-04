@@ -30,7 +30,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
         addTab()
     }
     
-    fun addTab(url: String = "https://github.com/liriliri/eruda") {
+    fun addTab(url: String = "https://www.google.com") {
         val webView = webViewFactory()
         val tab = Tab(
             id = System.currentTimeMillis(),
@@ -47,7 +47,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
     fun closeTab(index: Int) {
         if (_tabs.value.size <= 1) {
             // Don't close the last tab, just clear it
-            _tabs.value[index].webView.loadUrl("https://github.com/liriliri/eruda")
+            _tabs.value[index].webView.loadUrl("https://www.google.com")
             _tabs.value[index].title = "New Tab"
             return
         }
