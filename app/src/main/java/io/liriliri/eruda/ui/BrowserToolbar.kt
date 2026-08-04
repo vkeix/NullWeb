@@ -1,5 +1,6 @@
 package io.liriliri.eruda.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -49,6 +52,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun BrowserToolbar(
     currentUrl: String,
+    displayText: String,
     tabCount: Int,
     onUrlSubmit: (String) -> Unit,
     onHomeClick: () -> Unit,
@@ -56,6 +60,8 @@ fun BrowserToolbar(
     onTabCountClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
+    var isOmniboxFocused by remember { mutableStateOf(false) }
+
     Surface(
         color = MaterialTheme.colorScheme.background,
         shadowElevation = 2.dp
@@ -67,40 +73,49 @@ fun BrowserToolbar(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "G",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier
-                    .clickable { onHomeClick() }
-                    .padding(end = 16.dp)
-            )
+            // Hide "G" when typing
+            AnimatedVisibility(visible = !isOmniboxFocused) {
+                Text(
+                    text = "G",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .clickable { onHomeClick() }
+                        .padding(end = 16.dp)
+                )
+            }
 
             Omnibox(
-                url = currentUrl,
+                url = displayText,
                 onUrlSubmit = onUrlSubmit,
+                onFocusChanged = { isOmniboxFocused = it },
                 modifier = Modifier.weight(1f)
             )
 
             Spacer(Modifier.width(12.dp))
 
-            IconButton(onClick = onNewTabClick, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "New tab",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            // Hide action buttons when typing
+            AnimatedVisibility(visible = !isOmniboxFocused) {
+                Row {
+                    IconButton(onClick = onNewTabClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = "New tab",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
 
-            TabCountBox(count = tabCount, onClick = onTabCountClick)
+                    TabCountBox(count = tabCount, onClick = onTabCountClick)
 
-            IconButton(onClick = onMenuClick, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Filled.MoreVert,
-                    contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
+                    IconButton(onClick = onMenuClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Filled.MoreVert,
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
             }
         }
     }
@@ -110,12 +125,18 @@ fun BrowserToolbar(
 private fun Omnibox(
     url: String,
     onUrlSubmit: (String) -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var inputText by rememberSaveable(url) { mutableStateOf(url) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+
+    // Sync input text when URL changes externally (e.g. clicking a link)
+    LaunchedEffect(url) {
+        inputText = url
+    }
 
     Box(
         modifier = modifier
@@ -140,7 +161,10 @@ private fun Omnibox(
             onValueChange = { inputText = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .focusRequester(focusRequester)
+                .onFocusChanged { focusState ->
+                    onFocusChanged(focusState.isFocused)
+                },
             textStyle = TextStyle(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
@@ -189,6 +213,7 @@ private fun BrowserToolbarPreview() {
     MaterialTheme {
         BrowserToolbar(
             currentUrl = "github.com",
+            displayText = "github.com",
             tabCount = 1,
             onUrlSubmit = {},
             onHomeClick = {},
