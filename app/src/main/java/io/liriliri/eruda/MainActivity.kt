@@ -1,4 +1,3 @@
-
 package io.liriliri.eruda
 
 import android.Manifest
@@ -219,75 +218,76 @@ class MainActivity : AppCompatActivity() {
             }
             
             override fun onPageFinished(view: WebView, url: String) {
-		    super.onPageFinished(view, url)
-		    tabManager.onPageFinished?.invoke(view, url)
-		    
-		    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
-		    if (tabIndex >= 0) {
-		        tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
-		        tabManager.updateTabUrl(tabIndex, url)
-		    }   
-		
-		    // Inject Eruda script. Do NOT auto-init; app controls visibility per tab.
-		    val script = """
-		        (function () {
-		            if (window.eruda) return;
-		            var define;
-		            if (window.define) {
-		                define = window.define;
-		                window.define = null;
-		            }
-		            var script = document.createElement('script'); 
-		            script.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js'; 
-		            document.body.appendChild(script); 
-		            script.onload = function () { 
-		                if (define) {
-		                    window.define = define;
-		                }
-		                if (window.ErudaAndroid) {
-		                    var _orig = {};
-		                    ['log','warn','error','info','debug'].forEach(function(lvl) {
-		                        _orig[lvl] = console[lvl].bind(console);
-		                    });
-		                    ['log','warn','error','info','debug'].forEach(function(lvl) {
-		                        (function(l, orig) {
-		                            console[l] = function() {
-		                                orig.apply(console, arguments);
-		                                try {
-		                                    var msg = Array.prototype.slice.call(arguments).map(function(a) {
-		                                        try { return typeof a === 'string' ? a : JSON.stringify(a); }
-		                                        catch(e) { return String(a); }
-		                                    }).join(' ');
-		                                    window.ErudaAndroid.storeLog(l, msg);
-		                                } catch(e) {}
-		                            };
-		                        })(lvl, _orig[lvl]);
-		                    });
-		                    try {
-		                        var stored = JSON.parse(window.ErudaAndroid.getLogs() || '[]');
-		                        stored.forEach(function(entry) {
-		                            var lvl = entry.level;
-		                            if (_orig[lvl]) {
-		                                _orig[lvl](
-		                                    '\u23f0 ' +
-		                                    new Date(parseInt(entry.time, 10)).toLocaleTimeString() +
-		                                    ' ' + entry.args
-		                                );
-		                            }
-		                        });
-		                    } catch(e) {}
-		                }
-		            }
-		        })();
-		    """
-		    view.evaluateJavascript(script) {}
-		
-		    // Restore per-tab devtools state after page load
-		    val tab = tabManager.tabs.value.getOrNull(tabIndex)
-		    if (tab?.devToolsVisible == true) {
-		        view.evaluateJavascript("if(window.eruda){try{eruda.init();}catch(e){}}") {}
-		    }
-		}
+                super.onPageFinished(view, url)
+                tabManager.onPageFinished?.invoke(view, url)
+                
+                val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+                if (tabIndex >= 0) {
+                    tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
+                    tabManager.updateTabUrl(tabIndex, url)
+                }   
+            
+                // Inject Eruda script. Do NOT auto-init; app controls visibility per tab.
+                val script = """
+                    (function () {
+                        if (window.eruda) return;
+                        var define;
+                        if (window.define) {
+                            define = window.define;
+                            window.define = null;
+                        }
+                        var script = document.createElement('script'); 
+                        script.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js'; 
+                        document.body.appendChild(script); 
+                        script.onload = function () { 
+                            if (define) {
+                                window.define = define;
+                            }
+                            if (window.ErudaAndroid) {
+                                var _orig = {};
+                                ['log','warn','error','info','debug'].forEach(function(lvl) {
+                                    _orig[lvl] = console[lvl].bind(console);
+                                });
+                                ['log','warn','error','info','debug'].forEach(function(lvl) {
+                                    (function(l, orig) {
+                                        console[l] = function() {
+                                            orig.apply(console, arguments);
+                                            try {
+                                                var msg = Array.prototype.slice.call(arguments).map(function(a) {
+                                                    try { return typeof a === 'string' ? a : JSON.stringify(a); }
+                                                    catch(e) { return String(a); }
+                                                }).join(' ');
+                                                window.ErudaAndroid.storeLog(l, msg);
+                                            } catch(e) {}
+                                        };
+                                    })(lvl, _orig[lvl]);
+                                });
+                                try {
+                                    var stored = JSON.parse(window.ErudaAndroid.getLogs() || '[]');
+                                    stored.forEach(function(entry) {
+                                        var lvl = entry.level;
+                                        if (_orig[lvl]) {
+                                            _orig[lvl](
+                                                '\u23f0 ' +
+                                                new Date(parseInt(entry.time, 10)).toLocaleTimeString() +
+                                                ' ' + entry.args
+                                            );
+                                        }
+                                    });
+                                } catch(e) {}
+                            }
+                        }
+                    })();
+                """
+                view.evaluateJavascript(script) {}
+            
+                // Restore per-tab devtools state after page load
+                val tab = tabManager.tabs.value.getOrNull(tabIndex)
+                if (tab?.devToolsVisible == true) {
+                    view.evaluateJavascript("if(window.eruda){try{eruda.init();}catch(e){}}") {}
+                }
+            }
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
