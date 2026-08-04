@@ -5,13 +5,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * ViewModel for browser UI state.
- */
 class BrowserViewModel : ViewModel() {
     
     private val _currentUrl = MutableStateFlow("")
     val currentUrl: StateFlow<String> = _currentUrl.asStateFlow()
+    
+    private val _displayText = MutableStateFlow("")
+    val displayText: StateFlow<String> = _displayText.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -24,6 +24,10 @@ class BrowserViewModel : ViewModel() {
     
     fun updateCurrentUrl(url: String) {
         _currentUrl.value = url
+    }
+    
+    fun updateDisplayText(text: String) {
+        _displayText.value = text
     }
     
     fun setLoading(loading: Boolean) {
