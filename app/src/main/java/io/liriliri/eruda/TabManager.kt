@@ -93,23 +93,6 @@ class TabManager(private val webViewFactory: () -> WebView) {
         tab.webView.reload()
     }
 
-    fun toggleDevTools() {
-        val index = _activeTabIndex.value
-        val tab = _tabs.value.getOrNull(index) ?: return
-        val newState = !tab.devToolsVisible
-
-        _tabs.value = _tabs.value.mapIndexed { i, t ->
-            if (i == index) t.copy(devToolsVisible = newState) else t
-        }
-
-        val js = if (newState) {
-            "if(window.eruda){try{eruda.init();}catch(e){}}"
-        } else {
-            "if(window.eruda){try{eruda.destroy();}catch(e){}}"
-        }
-        tab.webView.evaluateJavascript(js) {}
-    }
-
     fun updateTabTitle(index: Int, title: String) {
         _tabs.value = _tabs.value.mapIndexed { i, tab ->
             if (i == index) tab.copy(title = title) else tab
@@ -149,8 +132,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
         var title: String,
         var url: String,
         var isHome: Boolean = true,
-        var isDesktop: Boolean = false,
-        var devToolsVisible: Boolean = false
+        var isDesktop: Boolean = false
     )
 
     companion object {
