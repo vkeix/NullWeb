@@ -32,6 +32,10 @@ class SearchHistory(context: Context) {
         return all().filter { it.lowercase().contains(q) }.take(limit)
     }
 
+    fun clear() {
+        prefs.edit().remove(KEY).apply()
+    }
+
     companion object {
         private const val KEY = "search_history"
         private const val MAX_ENTRIES = 20
