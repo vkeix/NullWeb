@@ -355,46 +355,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun serveCachedErudaScript(): WebResourceResponse? {
-        val headers = mapOf("Access-Control-Allow-Origin" to "*")
-
-        if (erudaScriptCacheFile.exists() &&
-            System.currentTimeMillis() - erudaScriptCacheFile.lastModified() < CACHE_MAX_AGE_MS
-        ) {
-            return WebResourceResponse(
-                "application/javascript", "utf-8", 200, "OK",
-                headers, erudaScriptCacheFile.inputStream()
-            )
-        }
-
-        return try {
-            val req = Request.Builder().url(ERUDA_CDN_URL).build()
-            val bytes = httpClient.newCall(req).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@use null
-                }
-                response.body?.bytes()
-            } ?: return null
-            try {
-                erudaScriptCacheFile.writeBytes(bytes)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to write eruda script cache: ${e.message}")
-            }
-            WebResourceResponse(
-                "application/javascript", "utf-8", 200, "OK",
-                headers, bytes.inputStream()
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to download eruda script: ${e.message}")
-            if (erudaScriptCacheFile.exists()) {
-                WebResourceResponse(
-                    "application/javascript", "utf-8", 200, "OK",
-                    headers, erudaScriptCacheFile.inputStream()
-                )
-            } else {
-                null
-            }
-        }
-    }
+	    val headers = mapOf("Access-Control-Allow-Origin" to "*")
+	    
+	    return try {
+	        // Read directly from local assets. No network, no 7-day cache expiry.
+	        val inputStream = assets.open("eruda.js")
+	        WebResourceResponse(
+	            "application/javascript", 
+	            "utf-8", 
+	            200, 
+	            "OK",
+	            headers, 
+	            inputStream
+	        )
+	    } catch (e: Exception) {
+	        Log.e(TAG, "Failed to load eruda from assets: ${e.message}")
+	        null
+	    }
+	}
 
     private fun loadFileUrl(url: String) {
         when {
