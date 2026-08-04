@@ -207,6 +207,25 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 view.evaluateJavascript(DEVTOOLS_AGENT) {}
+
+                val isDesktop = tabManager.tabs.value.firstOrNull { it.webView === view }?.isDesktop == true
+                if (isDesktop) {
+                    view.evaluateJavascript(
+                        """
+                        (function(){
+                            var c = 'width=1366';
+                            var m = document.querySelector('meta[name="viewport"]');
+                            if (m) { m.setAttribute('content', c); }
+                            else {
+                                m = document.createElement('meta');
+                                m.name = 'viewport';
+                                m.setAttribute('content', c);
+                                (document.head || document.documentElement).appendChild(m);
+                            }
+                        })();
+                        """
+                    ) {}
+                }
             }
         }
 
