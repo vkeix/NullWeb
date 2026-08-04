@@ -3,6 +3,7 @@ package io.liriliri.eruda
 import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
@@ -26,6 +27,16 @@ fun BrowserScreen(
     val tabs by tabManager.tabs.collectAsState()
     val activeTabIndex by tabManager.activeTabIndex.collectAsState()
     
+    // Intercept the Android hardware back button
+    BackHandler(enabled = showTabSwitcher || tabManager.activeTab?.webView?.canGoBack() == true) {
+        when {
+            // If the tab switcher is open, pressing back just closes it
+            showTabSwitcher -> viewModel.hideTabSwitcher()
+            // If the WebView has history, go back in history
+            else -> tabManager.activeTab?.webView?.goBack()
+        }
+    }
+
     LaunchedEffect(activeTabIndex) {
         tabManager.activeTab?.let { tab ->
             viewModel.updateCurrentUrl(tab.url)
@@ -67,7 +78,6 @@ fun BrowserScreen(
                 var url = input.trim()
                 var display = input.trim()
                 
-                // Clean up the search logic so the UI stays clean
                 if (!isHttpUrl(url) && !isFileUrl(url)) {
                     if (mayBeUrl(url)) {
                         url = "https://${url}"
@@ -75,7 +85,6 @@ fun BrowserScreen(
                     } else {
                         try {
                             url = "https://www.google.com/search?q=${URLEncoder.encode(url, "utf-8")}"
-                            // 'display' stays as the raw search term (e.g. "wiki")
                         } catch (e: Exception) {
                             Log.e("BrowserScreen", "Failed to encode search query", e)
                             return@BrowserToolbar
