@@ -42,6 +42,7 @@ fun BrowserScreen(
     searchHistory: SearchHistory,
     historyStore: HistoryStore,
     bookmarkStore: BookmarkStore,
+    snippetStore: SnippetStore,
     viewModel: BrowserViewModel = viewModel()
 ) {
     val displayText by viewModel.displayText.collectAsState()
@@ -306,6 +307,7 @@ fun BrowserScreen(
             )
             BrowserPage.DevTools -> DevToolsScreen(
                 webView = activeTab?.webView,
+                snippetStore = snippetStore,
                 onBack = { viewModel.closePage() }
             )
             null -> {}
