@@ -31,6 +31,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
+import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.HistoryStore
+import io.liriliri.eruda.store.SearchHistory
+
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager
     private lateinit var searchHistory: SearchHistory
