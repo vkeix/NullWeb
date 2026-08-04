@@ -27,6 +27,7 @@ import io.liriliri.eruda.store.SearchHistory
 import io.liriliri.eruda.ui.BookmarksScreen
 import io.liriliri.eruda.ui.BrowserMenuSheet
 import io.liriliri.eruda.ui.BrowserToolbar
+import io.liriliri.eruda.ui.DevToolsScreen
 import io.liriliri.eruda.ui.DownloadsScreen
 import io.liriliri.eruda.ui.HistoryScreen
 import io.liriliri.eruda.ui.SettingsScreen
@@ -259,7 +260,6 @@ fun BrowserScreen(
             )
         }
 
-        // Full-screen pages: cover the toolbar too, like Firefox
         when (openPage) {
             BrowserPage.History -> HistoryScreen(
                 entries = historyEntries,
@@ -304,6 +304,10 @@ fun BrowserScreen(
                     Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
                 }
             )
+            BrowserPage.DevTools -> DevToolsScreen(
+                webView = activeTab?.webView,
+                onBack = { viewModel.closePage() }
+            )
             null -> {}
         }
     }
@@ -334,10 +338,7 @@ fun BrowserScreen(
                 tabManager.setDesktopMode(activeTab?.isDesktop != true)
                 viewModel.hideMenu()
             },
-            onToggleDevTools = {
-                tabManager.toggleDevTools()
-                viewModel.hideMenu()
-            },
+            onOpenDevTools = { viewModel.openPage(BrowserPage.DevTools) },
             onOpenSettings = { viewModel.openPage(BrowserPage.Settings) },
             onBack = {
                 activeTab?.webView?.goBack()
