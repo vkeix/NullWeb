@@ -3,7 +3,6 @@ package io.liriliri.eruda.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -18,12 +18,14 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -49,6 +51,7 @@ fun BrowserMenuSheet(
     onOpenDownloads: () -> Unit,
     onBookmarkPage: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onToggleDevTools: () -> Unit,
     onOpenSettings: () -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -65,34 +68,48 @@ fun BrowserMenuSheet(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
+            // Group 1: tiles row — outer rounding only
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 SheetTile(Icons.Outlined.History, "History", Modifier.weight(1f), onOpenHistory)
                 SheetTile(Icons.Outlined.Bookmark, "Bookmarks", Modifier.weight(1f), onOpenBookmarks)
                 SheetTile(Icons.Outlined.Download, "Downloads", Modifier.weight(1f), onOpenDownloads)
             }
 
+            Spacer(Modifier.height(12.dp))
+
+            // Group 2: vertical menu — outer rounding only
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                SheetRow(Icons.Outlined.Star, "Bookmark page", onClick = onBookmarkPage)
+                GroupDivider()
+                SheetRow(
+                    Icons.Outlined.DesktopWindows,
+                    "Desktop site",
+                    trailing = if (isDesktopMode) "On" else "Off",
+                    onClick = onToggleDesktopMode
+                )
+                GroupDivider()
+                SheetRow(
+                    Icons.Outlined.Code,
+                    "Developer tools",
+                    onClick = onToggleDevTools
+                )
+                GroupDivider()
+                SheetRow(Icons.Outlined.Settings, "Settings", onClick = onOpenSettings)
+            }
+
             Spacer(Modifier.height(16.dp))
 
-            SheetRow(Icons.Outlined.Star, "Bookmark page", onClick = onBookmarkPage)
-
-            Spacer(Modifier.height(8.dp))
-
-            SheetRow(
-                Icons.Outlined.DesktopWindows,
-                "Desktop site",
-                trailing = if (isDesktopMode) "On" else "Off",
-                onClick = onToggleDesktopMode
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            SheetRow(Icons.Outlined.Settings, "Settings", onClick = onOpenSettings)
-
-            Spacer(Modifier.height(16.dp))
-
+            // Nav row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -107,6 +124,14 @@ fun BrowserMenuSheet(
 }
 
 @Composable
+private fun GroupDivider() {
+    HorizontalDivider(
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
 private fun SheetTile(
     icon: ImageVector,
     label: String,
@@ -116,8 +141,6 @@ private fun SheetTile(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp)
     ) {
@@ -127,7 +150,7 @@ private fun SheetTile(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(22.dp)
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             text = label,
             fontSize = 12.sp,
@@ -147,10 +170,8 @@ private fun SheetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -159,7 +180,7 @@ private fun SheetRow(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(22.dp)
         )
-        Spacer(Modifier.size(16.dp))
+        Spacer(Modifier.width(16.dp))
         Text(
             text = label,
             fontSize = 15.sp,
@@ -168,19 +189,12 @@ private fun SheetRow(
             modifier = Modifier.weight(1f)
         )
         if (trailing != null) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = trailing,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            Text(
+                text = trailing,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
