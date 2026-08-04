@@ -74,14 +74,18 @@ fun BrowserScreen(
     }
 
     BackHandler(
-        enabled = showTabSwitcher || isOmniboxFocused || activeTab?.webView?.canGoBack() == true
-    ) {
-        when {
-            showTabSwitcher -> viewModel.hideTabSwitcher()
-            isOmniboxFocused -> focusManager.clearFocus()
-            else -> activeTab?.webView?.goBack()
-        }
-    }
+	    enabled = showTabSwitcher || isOmniboxFocused || !isHome || activeTab?.webView?.canGoBack() == true
+	) {
+	    when {
+	        showTabSwitcher -> viewModel.hideTabSwitcher()
+	        isOmniboxFocused -> focusManager.clearFocus()
+	        activeTab?.webView?.canGoBack() == true -> activeTab.webView.goBack()
+	        !isHome -> {
+	            tabManager.goHome()
+	            viewModel.updateDisplayText("")
+	        }
+	    }
+	}
 
     LaunchedEffect(activeTabIndex) {
         tabManager.activeTab?.let { tab ->
