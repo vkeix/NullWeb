@@ -19,6 +19,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
     var onPageStarted: ((WebView, String) -> Unit)? = null
     var onPageFinished: ((WebView, String) -> Unit)? = null
     var onProgressChanged: ((WebView, Int) -> Unit)? = null
+    var onExternalUrl: ((String) -> Unit)? = null
 
     init {
         addTab()
@@ -33,6 +34,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
             url = "",
             isHome = true
         )
+        applyMode(tab)
 
         _tabs.value.getOrNull(_activeTabIndex.value)?.webView?.onPause()
         _tabs.value = _tabs.value + tab
@@ -85,6 +87,28 @@ class TabManager(private val webViewFactory: () -> WebView) {
         _tabs.value = tabs
     }
 
+    fun setDesktopMode(enabled: Boolean) {
+        val tabs = _tabs.value.toMutableList()
+        val tab = tabs.getOrNull(_activeTabIndex.value) ?: return
+        tab.isDesktop = enabled
+        _tabs.value = tabs
+        applyMode(tab)
+        tab.webView.reload()
+    }
+
+    private fun applyMode(tab: Tab) {
+        val settings = tab.webView.settings
+        if (tab.isDesktop) {
+            settings.userAgentString = DESKTOP_USER_AGENT
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+        } else {
+            settings.userAgentString = null
+            settings.useWideViewPort = false
+            settings.loadWithOverviewMode = false
+        }
+    }
+
     private fun resetToHome(index: Int) {
         val tabs = _tabs.value.toMutableList()
         tabs[index].isHome = true
@@ -115,6 +139,12 @@ class TabManager(private val webViewFactory: () -> WebView) {
         val webView: WebView,
         var title: String,
         var url: String,
-        var isHome: Boolean = true
+        var isHome: Boolean = true,
+        var isDesktop: Boolean = false
     )
+
+    companion object {
+        private const val DESKTOP_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
 }
