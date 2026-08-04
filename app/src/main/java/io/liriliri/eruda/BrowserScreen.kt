@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.HistoryStore
+import io.liriliri.eruda.store.SearchHistory
 import io.liriliri.eruda.ui.BookmarksScreen
 import io.liriliri.eruda.ui.BrowserMenuSheet
 import io.liriliri.eruda.ui.BrowserToolbar
@@ -31,10 +33,6 @@ import io.liriliri.eruda.ui.SettingsScreen
 import io.liriliri.eruda.ui.StartPage
 import io.liriliri.eruda.ui.SuggestionOverlay
 import io.liriliri.eruda.ui.TabSwitcherOverlay
-
-import io.liriliri.eruda.store.BookmarkStore
-import io.liriliri.eruda.store.HistoryStore
-import io.liriliri.eruda.store.SearchHistory
 import java.net.URLEncoder
 
 @Composable
@@ -164,156 +162,164 @@ fun BrowserScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(1f)) {
-            AndroidView(
-                factory = { ctx ->
-                    FrameLayout(ctx).apply {
-                        layoutParams = android.view.ViewGroup.LayoutParams(
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                    }
-                },
-                update = { container ->
-                    val currentViews = (0 until container.childCount)
-                        .map { container.getChildAt(it) as android.webkit.WebView }
-
-                    tabs.forEach { tab ->
-                        if (!currentViews.contains(tab.webView)) {
-                            tab.webView.layoutParams = android.view.ViewGroup.LayoutParams(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                AndroidView(
+                    factory = { ctx ->
+                        FrameLayout(ctx).apply {
+                            layoutParams = android.view.ViewGroup.LayoutParams(
                                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                                 android.view.ViewGroup.LayoutParams.MATCH_PARENT
                             )
-                            container.addView(tab.webView)
                         }
-                    }
+                    },
+                    update = { container ->
+                        val currentViews = (0 until container.childCount)
+                            .map { container.getChildAt(it) as android.webkit.WebView }
 
-                    currentViews.forEach { webView ->
-                        if (tabs.none { it.webView === webView }) {
-                            container.removeView(webView)
+                        tabs.forEach { tab ->
+                            if (!currentViews.contains(tab.webView)) {
+                                tab.webView.layoutParams = android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                container.addView(tab.webView)
+                            }
                         }
-                    }
 
-                    for (i in 0 until container.childCount) {
-                        val webView = container.getChildAt(i)
-                        val tabIndex = tabs.indexOfFirst { it.webView === webView }
-                        webView.visibility = if (tabIndex == activeTabIndex) {
-                            View.VISIBLE
-                        } else {
-                            View.GONE
+                        currentViews.forEach { webView ->
+                            if (tabs.none { it.webView === webView }) {
+                                container.removeView(webView)
+                            }
                         }
-                    }
+
+                        for (i in 0 until container.childCount) {
+                            val webView = container.getChildAt(i)
+                            val tabIndex = tabs.indexOfFirst { it.webView === webView }
+                            webView.visibility = if (tabIndex == activeTabIndex) {
+                                View.VISIBLE
+                            } else {
+                                View.GONE
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (isHome) {
+                    StartPage(
+                        history = searchEntries,
+                        onNavigate = resolveAndLoad
+                    )
+                }
+
+                if (showSuggestions) {
+                    SuggestionOverlay(
+                        historyMatches = historyMatches,
+                        googleSuggestions = suggestions,
+                        onPick = resolveAndLoad
+                    )
+                }
+
+                if (showTabSwitcher) {
+                    TabSwitcherOverlay(
+                        tabs = tabs,
+                        activeTabIndex = activeTabIndex,
+                        onTabClick = { index ->
+                            tabManager.switchToTab(index)
+                            viewModel.hideTabSwitcher()
+                        },
+                        onTabClose = { tabManager.closeTab(it) },
+                        onClose = { viewModel.hideTabSwitcher() }
+                    )
+                }
+            }
+
+            if (isLoading) {
+                LinearProgressIndicator(
+                    progress = loadingProgress / 100f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            BrowserToolbar(
+                committedUrl = displayText,
+                tabCount = tabs.size,
+                onUrlSubmit = resolveAndLoad,
+                onQueryChange = viewModel::onQueryChange,
+                onFocusChanged = { isOmniboxFocused = it },
+                onHomeClick = {
+                    tabManager.goHome()
+                    viewModel.updateDisplayText("")
                 },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            if (isHome) {
-                StartPage(
-                    history = searchEntries,
-                    onNavigate = resolveAndLoad
-                )
-            }
-
-            if (showSuggestions) {
-                SuggestionOverlay(
-                    historyMatches = historyMatches,
-                    googleSuggestions = suggestions,
-                    onPick = resolveAndLoad
-                )
-            }
-
-            if (showTabSwitcher) {
-                TabSwitcherOverlay(
-                    tabs = tabs,
-                    activeTabIndex = activeTabIndex,
-                    onTabClick = { index ->
-                        tabManager.switchToTab(index)
-                        viewModel.hideTabSwitcher()
-                    },
-                    onTabClose = { tabManager.closeTab(it) },
-                    onClose = { viewModel.hideTabSwitcher() }
-                )
-            }
-
-            when (openPage) {
-                BrowserPage.History -> HistoryScreen(
-                    entries = historyEntries,
-                    onBack = { viewModel.closePage() },
-                    onRemove = { entry ->
-                        historyStore.remove(entry)
-                        historyEntries = historyStore.all()
-                    },
-                    onClearAll = {
-                        historyStore.clear()
-                        historyEntries = emptyList()
-                    }
-                )
-                BrowserPage.Bookmarks -> BookmarksScreen(
-                    bookmarks = bookmarks,
-                    onBack = { viewModel.closePage() },
-                    onOpen = { resolveAndLoad(it.url) },
-                    onRemove = { bookmark ->
-                        bookmarkStore.remove(bookmark)
-                        bookmarks = bookmarkStore.all()
-                    }
-                )
-                BrowserPage.Downloads -> DownloadsScreen(onBack = { viewModel.closePage() })
-                BrowserPage.Settings -> SettingsScreen(
-                    onBack = { viewModel.closePage() },
-                    onClearHistory = {
-                        historyStore.clear()
-                        historyEntries = emptyList()
-                        Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
-                    },
-                    onClearBookmarks = {
-                        bookmarkStore.clear()
-                        bookmarks = emptyList()
-                        Toast.makeText(context, "Bookmarks cleared", Toast.LENGTH_SHORT).show()
-                    },
-                    onClearSearches = {
-                        searchHistory.clear()
-                        searchEntries = emptyList()
-                        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                null -> {}
-            }
-        }
-
-        if (isLoading) {
-            LinearProgressIndicator(
-                progress = loadingProgress / 100f,
-                modifier = Modifier.fillMaxWidth()
+                onNewTabClick = { tabManager.addTab() },
+                onTabCountClick = { viewModel.toggleTabSwitcher() },
+                onMenuClick = { viewModel.showMenu() }
             )
         }
 
-        BrowserToolbar(
-            committedUrl = displayText,
-            tabCount = tabs.size,
-            onUrlSubmit = resolveAndLoad,
-            onQueryChange = viewModel::onQueryChange,
-            onFocusChanged = { isOmniboxFocused = it },
-            onHomeClick = {
-                tabManager.goHome()
-                viewModel.updateDisplayText("")
-            },
-            onNewTabClick = { tabManager.addTab() },
-            onTabCountClick = { viewModel.toggleTabSwitcher() },
-            onMenuClick = { viewModel.showMenu() }
-        )
+        // Full-screen pages: cover the toolbar too, like Firefox
+        when (openPage) {
+            BrowserPage.History -> HistoryScreen(
+                entries = historyEntries,
+                onBack = { viewModel.closePage() },
+                onRemove = { entry ->
+                    historyStore.remove(entry)
+                    historyEntries = historyStore.all()
+                },
+                onClearAll = {
+                    historyStore.clear()
+                    historyEntries = emptyList()
+                }
+            )
+            BrowserPage.Bookmarks -> BookmarksScreen(
+                bookmarks = bookmarks,
+                onBack = { viewModel.closePage() },
+                onOpen = { bookmark ->
+                    viewModel.closePage()
+                    resolveAndLoad(bookmark.url)
+                },
+                onRemove = { bookmark ->
+                    bookmarkStore.remove(bookmark)
+                    bookmarks = bookmarkStore.all()
+                }
+            )
+            BrowserPage.Downloads -> DownloadsScreen(onBack = { viewModel.closePage() })
+            BrowserPage.Settings -> SettingsScreen(
+                onBack = { viewModel.closePage() },
+                onClearHistory = {
+                    historyStore.clear()
+                    historyEntries = emptyList()
+                    Toast.makeText(context, "History cleared", Toast.LENGTH_SHORT).show()
+                },
+                onClearBookmarks = {
+                    bookmarkStore.clear()
+                    bookmarks = emptyList()
+                    Toast.makeText(context, "Bookmarks cleared", Toast.LENGTH_SHORT).show()
+                },
+                onClearSearches = {
+                    searchHistory.clear()
+                    searchEntries = emptyList()
+                    Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
+                }
+            )
+            null -> {}
+        }
     }
 
     if (showMenu) {
         BrowserMenuSheet(
             isDesktopMode = activeTab?.isDesktop == true,
+            canGoBack = activeTab?.webView?.canGoBack() == true,
+            canGoForward = activeTab?.webView?.canGoForward() == true,
             onDismiss = { viewModel.hideMenu() },
             onOpenHistory = { viewModel.openPage(BrowserPage.History) },
             onOpenBookmarks = { viewModel.openPage(BrowserPage.Bookmarks) },
             onOpenDownloads = { viewModel.openPage(BrowserPage.Downloads) },
             onBookmarkPage = {
-                val tab = tabManager.activeTab ?: return@BrowserMenuSheet
-                if (tab.url.isNotEmpty()) {
+                val tab = tabManager.activeTab
+                if (tab != null && tab.url.isNotEmpty()) {
                     val added = bookmarkStore.toggle(tab.title, tab.url)
                     bookmarks = bookmarkStore.all()
                     Toast.makeText(
@@ -326,8 +332,32 @@ fun BrowserScreen(
             },
             onToggleDesktopMode = {
                 tabManager.setDesktopMode(activeTab?.isDesktop != true)
+                viewModel.hideMenu()
             },
-            onOpenSettings = { viewModel.openPage(BrowserPage.Settings) }
+            onOpenSettings = { viewModel.openPage(BrowserPage.Settings) },
+            onBack = {
+                activeTab?.webView?.goBack()
+                viewModel.hideMenu()
+            },
+            onForward = {
+                activeTab?.webView?.goForward()
+                viewModel.hideMenu()
+            },
+            onShare = {
+                val tab = tabManager.activeTab
+                if (tab != null && tab.url.isNotEmpty()) {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, tab.url)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Share link"))
+                }
+                viewModel.hideMenu()
+            },
+            onRefresh = {
+                activeTab?.webView?.reload()
+                viewModel.hideMenu()
+            }
         )
     }
 
