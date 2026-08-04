@@ -34,6 +34,8 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager
     private lateinit var searchHistory: SearchHistory
+    private lateinit var historyStore: HistoryStore
+    private lateinit var bookmarkStore: BookmarkStore
     private val TAG = "Eruda.MainActivity"
     var mFilePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileUrl: String? = null
@@ -99,6 +101,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         searchHistory = SearchHistory(this)
+        historyStore = HistoryStore(this)
+        bookmarkStore = BookmarkStore(this)
 
         // Initialize tab manager with WebView factory
         tabManager = TabManager { createConfiguredWebView() }
@@ -118,7 +122,7 @@ class MainActivity : AppCompatActivity() {
             }
             
             MaterialTheme(colorScheme = colorScheme) {
-                BrowserScreen(tabManager, searchHistory)
+                BrowserScreen(tabManager, searchHistory, historyStore, bookmarkStore)
             }
         }
     }
@@ -138,13 +142,9 @@ class MainActivity : AppCompatActivity() {
                     return false
                 }
 
-                return try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    startActivity(intent)
-                    false
-                } catch (e: Exception) {
-                    true
-                }
+                // External app link (intent://, market://, custom schemes): ask the user first.
+                tabManager.onExternalUrl?.invoke(url)
+                return true
             }
 
             override fun shouldInterceptRequest(
