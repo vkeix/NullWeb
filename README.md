@@ -1,5 +1,7 @@
-# eruda-android
+# NullWeb
 
-This simple browser like app loads eruda automatically on every page, useful for testing and debugging android system webview. [Download Now](https://github.com/liriliri/eruda-android/releases/)!
+A lightweight, multi-tab browser for Android with built-in developer tools. Built on Jetpack Compose and Android WebView.
 
-![screenshot](https://eruda.liriliri.io/eruda-android.jpg)
+[Download Latest Release](https://github.com/vkeix/NullWeb/releases)
+
+![NullWeb](https://raw.githubusercontent.com/vkeix/NullWeb/main/screenshots/overview.jpg)
