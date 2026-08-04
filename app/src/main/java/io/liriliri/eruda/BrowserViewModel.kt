@@ -15,6 +15,8 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.net.URLEncoder
 
+enum class BrowserPage { History, Bookmarks, Downloads, Settings }
+
 class BrowserViewModel : ViewModel() {
 
     private val _currentUrl = MutableStateFlow("")
@@ -31,6 +33,15 @@ class BrowserViewModel : ViewModel() {
 
     private val _showTabSwitcher = MutableStateFlow(false)
     val showTabSwitcher: StateFlow<Boolean> = _showTabSwitcher.asStateFlow()
+
+    private val _showMenu = MutableStateFlow(false)
+    val showMenu: StateFlow<Boolean> = _showMenu.asStateFlow()
+
+    private val _openPage = MutableStateFlow<BrowserPage?>(null)
+    val openPage: StateFlow<BrowserPage?> = _openPage.asStateFlow()
+
+    private val _pendingExternalUrl = MutableStateFlow<String?>(null)
+    val pendingExternalUrl: StateFlow<String?> = _pendingExternalUrl.asStateFlow()
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
@@ -63,6 +74,31 @@ class BrowserViewModel : ViewModel() {
 
     fun hideTabSwitcher() {
         _showTabSwitcher.value = false
+    }
+
+    fun showMenu() {
+        _showMenu.value = true
+    }
+
+    fun hideMenu() {
+        _showMenu.value = false
+    }
+
+    fun openPage(page: BrowserPage) {
+        _showMenu.value = false
+        _openPage.value = page
+    }
+
+    fun closePage() {
+        _openPage.value = null
+    }
+
+    fun requestExternalOpen(url: String) {
+        _pendingExternalUrl.value = url
+    }
+
+    fun clearExternalRequest() {
+        _pendingExternalUrl.value = null
     }
 
     fun onQueryChange(query: String) {
