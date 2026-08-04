@@ -6,7 +6,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,7 +14,6 @@ import android.provider.Settings
 import android.util.Log
 import android.view.MotionEvent
 import android.webkit.*
-import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,10 +30,10 @@ import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.net.URLEncoder
 
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager
+    private lateinit var searchHistory: SearchHistory
     private val TAG = "Eruda.MainActivity"
     var mFilePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileUrl: String? = null
@@ -45,10 +43,9 @@ class MainActivity : AppCompatActivity() {
     private val MAX_CONSOLE_ENTRIES = 500
     private val consoleLogs = mutableListOf<Map<String, String>>()
 
-    // Feature 2: local cache for the eruda script (avoids re-downloading on each page load).
+    // The explicit /eruda.js path is used so jsDelivr returns the JS directly without a redirect.
     private val ERUDA_CDN_URL = "https://cdn.jsdelivr.net/npm/eruda/eruda.js"
-    private val CACHE_MAX_AGE_MS = 7 * 24 * 3600 * 1000L  // 7 days
-    private val erudaScriptCacheFile: File by lazy { File(filesDir, "eruda_cache.js") }
+    // Shared OkHttpClient for CSP bypass requests (reuses connection pool).
     private val httpClient = OkHttpClient()
 
     /** JavaScript-to-Android bridge exposed as `window.ErudaAndroid`. */
@@ -101,6 +98,8 @@ class MainActivity : AppCompatActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        searchHistory = SearchHistory(this)
+
         // Initialize tab manager with WebView factory
         tabManager = TabManager { createConfiguredWebView() }
 
@@ -119,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             }
             
             MaterialTheme(colorScheme = colorScheme) {
-                BrowserScreen(tabManager)
+                BrowserScreen(tabManager, searchHistory)
             }
         }
     }
@@ -210,20 +209,20 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageStarted(view: WebView?, url: String, favicon: Bitmap?) {
-			    super.onPageStarted(view, url, favicon)
-			    view?.let { tabManager.onPageStarted?.invoke(it, url) }
-			}
-			
-			override fun onPageFinished(view: WebView, url: String) {
-			    super.onPageFinished(view, url)
-			    tabManager.onPageFinished?.invoke(view, url)
-			    
-			    val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
-			    if (tabIndex >= 0) {
-			        tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
-			        tabManager.updateTabUrl(tabIndex, url)
-			    }   
-			
+                super.onPageStarted(view, url, favicon)
+                view?.let { tabManager.onPageStarted?.invoke(it, url) }
+            }
+            
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+                tabManager.onPageFinished?.invoke(view, url)
+                
+                val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
+                if (tabIndex >= 0) {
+                    tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
+                    tabManager.updateTabUrl(tabIndex, url)
+                }   
+            
                 // Inject Eruda
                 val script = """
                     (function () {
@@ -283,9 +282,9 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
-			    super.onProgressChanged(view, newProgress)
-			    tabManager.onProgressChanged?.invoke(view, newProgress)
-			}
+                super.onProgressChanged(view, newProgress)
+                tabManager.onProgressChanged?.invoke(view, newProgress)
+            }
 
             override fun onShowFileChooser(
                 webView: WebView?,
@@ -329,7 +328,7 @@ class MainActivity : AppCompatActivity() {
     private fun serveFileUrl(uri: android.net.Uri): WebResourceResponse? {
         return try {
             val path = uri.path ?: return null
-            val file = java.io.File(path).canonicalFile
+            val file = File(path).canonicalFile
             if (!file.exists() || !file.canRead()) return null
             val ext = file.extension.lowercase()
             val mimeType = when (ext) {
@@ -355,24 +354,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun serveCachedErudaScript(): WebResourceResponse? {
-	    val headers = mapOf("Access-Control-Allow-Origin" to "*")
-	    
-	    return try {
-	        // Read directly from local assets. No network, no 7-day cache expiry.
-	        val inputStream = assets.open("eruda.js")
-	        WebResourceResponse(
-	            "application/javascript", 
-	            "utf-8", 
-	            200, 
-	            "OK",
-	            headers, 
-	            inputStream
-	        )
-	    } catch (e: Exception) {
-	        Log.e(TAG, "Failed to load eruda from assets: ${e.message}")
-	        null
-	    }
-	}
+        val headers = mapOf("Access-Control-Allow-Origin" to "*")
+        
+        return try {
+            // Read directly from local assets. No network, no cache expiry.
+            val inputStream = assets.open("eruda.js")
+            WebResourceResponse(
+                "application/javascript", 
+                "utf-8", 
+                200, 
+                "OK",
+                headers, 
+                inputStream
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load eruda from assets: ${e.message}")
+            null
+        }
+    }
 
     private fun loadFileUrl(url: String) {
         when {
