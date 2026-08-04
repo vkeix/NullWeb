@@ -24,15 +24,13 @@ fun BrowserScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val loadingProgress by viewModel.loadingProgress.collectAsState()
     val showTabSwitcher by viewModel.showTabSwitcher.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
     val tabs by tabManager.tabs.collectAsState()
     val activeTabIndex by tabManager.activeTabIndex.collectAsState()
     
-    // Intercept the Android hardware back button
     BackHandler(enabled = showTabSwitcher || tabManager.activeTab?.webView?.canGoBack() == true) {
         when {
-            // If the tab switcher is open, pressing back just closes it
             showTabSwitcher -> viewModel.hideTabSwitcher()
-            // If the WebView has history, go back in history
             else -> tabManager.activeTab?.webView?.goBack()
         }
     }
@@ -71,9 +69,9 @@ fun BrowserScreen(
     
     Column(modifier = Modifier.fillMaxSize()) {
         BrowserToolbar(
-            currentUrl = currentUrl,
-            displayText = displayText,
+            committedUrl = displayText,
             tabCount = tabs.size,
+            suggestions = suggestions,
             onUrlSubmit = { input ->
                 var url = input.trim()
                 var display = input.trim()
@@ -96,6 +94,9 @@ fun BrowserScreen(
                 
                 viewModel.updateDisplayText(display)
                 tabManager.activeTab?.webView?.loadUrl(url)
+            },
+            onQueryChange = { query ->
+                viewModel.onQueryChange(query)
             },
             onHomeClick = {
                 tabManager.activeTab?.webView?.loadUrl("https://www.google.com")
