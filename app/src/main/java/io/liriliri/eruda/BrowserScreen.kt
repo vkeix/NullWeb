@@ -56,6 +56,7 @@ fun BrowserScreen(
     val query by viewModel.query.collectAsState()
     val tabs by tabManager.tabs.collectAsState()
     val activeTabIndex by tabManager.activeTabIndex.collectAsState()
+    val thumbnails by tabManager.thumbnails.collectAsState()
 
     var isOmniboxFocused by remember { mutableStateOf(false) }
     var searchEntries by remember { mutableStateOf(searchHistory.all()) }
@@ -131,6 +132,12 @@ fun BrowserScreen(
         }
     }
 
+    LaunchedEffect(showTabSwitcher) {
+        if (showTabSwitcher) {
+            tabManager.captureActiveThumbnail()
+        }
+    }
+
     LaunchedEffect(tabManager) {
         tabManager.onPageStarted = { view, url ->
             val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
@@ -145,6 +152,7 @@ fun BrowserScreen(
             if (tabIndex == tabManager.activeTabIndex.value) {
                 viewModel.setLoading(false)
                 viewModel.updateDisplayText(url)
+                tabManager.captureActiveThumbnail()
             }
             historyStore.add(view.title ?: "Untitled", url)
             if (viewModel.openPage.value == BrowserPage.History) {
@@ -227,6 +235,7 @@ fun BrowserScreen(
                 if (showTabSwitcher) {
                     TabSwitcherOverlay(
                         tabs = tabs,
+                        thumbnails = thumbnails,
                         activeTabIndex = activeTabIndex,
                         onTabClick = { index ->
                             tabManager.switchToTab(index)
