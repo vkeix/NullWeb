@@ -1,5 +1,7 @@
 package io.liriliri.eruda
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.webkit.WebView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +14,9 @@ class TabManager(private val webViewFactory: () -> WebView) {
 
     private val _activeTabIndex = MutableStateFlow(0)
     val activeTabIndex: StateFlow<Int> = _activeTabIndex.asStateFlow()
+
+    private val _thumbnails = MutableStateFlow<Map<Long, Bitmap>>(emptyMap())
+    val thumbnails: StateFlow<Map<Long, Bitmap>> = _thumbnails.asStateFlow()
 
     val activeTab: Tab?
         get() = _tabs.value.getOrNull(_activeTabIndex.value)
@@ -26,6 +31,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
     }
 
     fun addTab() {
+        captureActiveThumbnail()
         val webView = webViewFactory()
         val tab = Tab(
             id = System.currentTimeMillis(),
@@ -50,6 +56,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
         val removed = _tabs.value[index]
         removed.webView.destroy()
         _tabs.value = _tabs.value.filterIndexed { i, _ -> i != index }
+        _thumbnails.value = _thumbnails.value - removed.id
 
         when {
             index < _activeTabIndex.value -> _activeTabIndex.value--
@@ -63,6 +70,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
 
     fun switchToTab(index: Int) {
         if (index !in _tabs.value.indices || index == _activeTabIndex.value) return
+        captureActiveThumbnail()
         _tabs.value.getOrNull(_activeTabIndex.value)?.webView?.onPause()
         _activeTabIndex.value = index
         _tabs.value[index].webView.onResume()
@@ -102,6 +110,31 @@ class TabManager(private val webViewFactory: () -> WebView) {
     fun updateTabUrl(index: Int, url: String) {
         _tabs.value = _tabs.value.mapIndexed { i, tab ->
             if (i == index) tab.copy(url = url) else tab
+        }
+    }
+
+    fun captureActiveThumbnail() {
+        val tab = activeTab ?: return
+        val webView = tab.webView
+        if (webView.width <= 0 || webView.height <= 0) return
+        // Post to next frame so we capture the painted state
+        webView.post {
+            try {
+                val w = webView.width
+                val h = webView.height
+                if (w <= 0 || h <= 0) return@post
+                val scale = 320f / w
+                val bitmap = Bitmap.createBitmap(
+                    320,
+                    (h * scale).toInt().coerceAtLeast(1),
+                    Bitmap.Config.ARGB_8888
+                )
+                val canvas = Canvas(bitmap)
+                canvas.scale(scale, scale)
+                webView.draw(canvas)
+                _thumbnails.value = _thumbnails.value + (tab.id to bitmap)
+            } catch (e: Exception) {
+            }
         }
     }
 
