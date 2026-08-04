@@ -34,7 +34,6 @@ class TabManager(private val webViewFactory: () -> WebView) {
             url = "",
             isHome = true
         )
-        applyMode(tab)
 
         _tabs.value.getOrNull(_activeTabIndex.value)?.webView?.onPause()
         _tabs.value = _tabs.value + tab
@@ -48,16 +47,16 @@ class TabManager(private val webViewFactory: () -> WebView) {
             return
         }
 
-        val tabs = _tabs.value.toMutableList()
-        tabs.removeAt(index).webView.destroy()
-        _tabs.value = tabs
+        val removed = _tabs.value[index]
+        removed.webView.destroy()
+        _tabs.value = _tabs.value.filterIndexed { i, _ -> i != index }
 
         when {
             index < _activeTabIndex.value -> _activeTabIndex.value--
             index == _activeTabIndex.value -> {
-                val newIndex = index.coerceAtMost(tabs.size - 1)
+                val newIndex = index.coerceAtMost(_tabs.value.size - 1)
                 _activeTabIndex.value = newIndex
-                tabs[newIndex].webView.onResume()
+                _tabs.value[newIndex].webView.onResume()
             }
         }
     }
@@ -71,34 +70,44 @@ class TabManager(private val webViewFactory: () -> WebView) {
 
     fun loadUrl(url: String) {
         val index = _activeTabIndex.value
-        val tabs = _tabs.value.toMutableList()
-        tabs[index].isHome = false
-        tabs[index].url = url
-        _tabs.value = tabs
-        tabs[index].webView.loadUrl(url)
+        _tabs.value = _tabs.value.mapIndexed { i, tab ->
+            if (i == index) tab.copy(isHome = false, url = url) else tab
+        }
+        _tabs.value[index].webView.loadUrl(url)
     }
 
     fun goHome() {
         val index = _activeTabIndex.value
-        val tabs = _tabs.value.toMutableList()
-        tabs[index].isHome = true
-        tabs[index].title = "New Tab"
-        tabs[index].url = ""
-        _tabs.value = tabs
+        _tabs.value = _tabs.value.mapIndexed { i, tab ->
+            if (i == index) tab.copy(isHome = true, title = "New Tab", url = "") else tab
+        }
     }
 
     fun setDesktopMode(enabled: Boolean) {
-        val tabs = _tabs.value.toMutableList()
-        val tab = tabs.getOrNull(_activeTabIndex.value) ?: return
-        tab.isDesktop = enabled
-        _tabs.value = tabs
-        applyMode(tab)
+        val index = _activeTabIndex.value
+        val tab = _tabs.value.getOrNull(index) ?: return
+        _tabs.value = _tabs.value.mapIndexed { i, t ->
+            if (i == index) t.copy(isDesktop = enabled) else t
+        }
+        applyMode(tab.webView, enabled)
         tab.webView.reload()
     }
 
-    private fun applyMode(tab: Tab) {
-        val settings = tab.webView.settings
-        if (tab.isDesktop) {
+    fun updateTabTitle(index: Int, title: String) {
+        _tabs.value = _tabs.value.mapIndexed { i, tab ->
+            if (i == index) tab.copy(title = title) else tab
+        }
+    }
+
+    fun updateTabUrl(index: Int, url: String) {
+        _tabs.value = _tabs.value.mapIndexed { i, tab ->
+            if (i == index) tab.copy(url = url) else tab
+        }
+    }
+
+    private fun applyMode(webView: WebView, isDesktop: Boolean) {
+        val settings = webView.settings
+        if (isDesktop) {
             settings.userAgentString = DESKTOP_USER_AGENT
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
@@ -110,28 +119,11 @@ class TabManager(private val webViewFactory: () -> WebView) {
     }
 
     private fun resetToHome(index: Int) {
-        val tabs = _tabs.value.toMutableList()
-        tabs[index].isHome = true
-        tabs[index].title = "New Tab"
-        tabs[index].url = ""
-        tabs[index].webView.loadUrl("about:blank")
-        _tabs.value = tabs
-    }
-
-    fun updateTabTitle(index: Int, title: String) {
-        val tabs = _tabs.value.toMutableList()
-        if (index in tabs.indices) {
-            tabs[index].title = title
-            _tabs.value = tabs
+        val tab = _tabs.value.getOrNull(index) ?: return
+        _tabs.value = _tabs.value.mapIndexed { i, t ->
+            if (i == index) t.copy(isHome = true, title = "New Tab", url = "") else t
         }
-    }
-
-    fun updateTabUrl(index: Int, url: String) {
-        val tabs = _tabs.value.toMutableList()
-        if (index in tabs.indices) {
-            tabs[index].url = url
-            _tabs.value = tabs
-        }
+        tab.webView.loadUrl("about:blank")
     }
 
     data class Tab(
