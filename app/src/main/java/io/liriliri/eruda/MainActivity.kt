@@ -27,8 +27,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 
 import io.liriliri.eruda.store.BookmarkStore
@@ -40,50 +38,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchHistory: SearchHistory
     private lateinit var historyStore: HistoryStore
     private lateinit var bookmarkStore: BookmarkStore
-    private val TAG = "Eruda.MainActivity"
+    private val TAG = "NullWeb.MainActivity"
     var mFilePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileUrl: String? = null
 
-    // Feature 1: in-memory console-log session storage (persists across page navigations).
-    // Access is guarded by synchronized blocks in storeLog / getLogs.
-    private val MAX_CONSOLE_ENTRIES = 500
-    private val consoleLogs = mutableListOf<Map<String, String>>()
-
-    // The explicit /eruda.js path is used so jsDelivr returns the JS directly without a redirect.
-    private val ERUDA_CDN_URL = "https://cdn.jsdelivr.net/npm/eruda/eruda.js"
-    // Shared OkHttpClient for CSP bypass requests (reuses connection pool).
     private val httpClient = OkHttpClient()
 
-    /** JavaScript-to-Android bridge exposed as `window.ErudaAndroid`. */
-    inner class ErudaBridge {
+    /** JavaScript-to-Android bridge exposed as `window.DevToolsAndroid`. */
+    inner class DevToolsBridge {
         @android.webkit.JavascriptInterface
         fun storeLog(level: String, args: String) {
-            val entry = mapOf(
-                "level" to level,
-                "args" to args,
-                "time" to System.currentTimeMillis().toString()
-            )
-            synchronized(consoleLogs) {
-                consoleLogs.add(entry)
-                if (consoleLogs.size > MAX_CONSOLE_ENTRIES) {
-                    consoleLogs.removeAt(0)
-                }
-            }
-        }
-
-        @android.webkit.JavascriptInterface
-        fun getLogs(): String {
-            val json = JSONArray()
-            synchronized(consoleLogs) {
-                consoleLogs.forEach { log ->
-                    val obj = JSONObject()
-                    obj.put("level", log["level"] ?: "log")
-                    obj.put("args", log["args"] ?: "")
-                    obj.put("time", log["time"] ?: "0")
-                    json.put(obj)
-                }
-            }
-            return json.toString()
+            DevToolsBus.push(level, args)
         }
     }
 
@@ -108,7 +73,6 @@ class MainActivity : AppCompatActivity() {
         historyStore = HistoryStore(this)
         bookmarkStore = BookmarkStore(this)
 
-        // Initialize tab manager with WebView factory
         tabManager = TabManager { createConfiguredWebView() }
 
         setContent {
@@ -124,7 +88,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 lightColorScheme()
             }
-            
+
             MaterialTheme(colorScheme = colorScheme) {
                 BrowserScreen(tabManager, searchHistory, historyStore, bookmarkStore)
             }
@@ -134,7 +98,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun createConfiguredWebView(): WebView {
         val webView = WebViewFactory.create(this)
-        
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
                 view: WebView,
@@ -146,7 +110,6 @@ class MainActivity : AppCompatActivity() {
                     return false
                 }
 
-                // External app link (intent://, market://, custom schemes): ask the user first.
                 tabManager.onExternalUrl?.invoke(url)
                 return true
             }
@@ -159,10 +122,6 @@ class MainActivity : AppCompatActivity() {
 
                 if (isFileUrl(url)) {
                     return serveFileUrl(request.url)
-                }
-
-                if (url.startsWith(ERUDA_CDN_URL)) {
-                    return serveCachedErudaScript()
                 }
 
                 if (request.isForMainFrame) {
@@ -216,76 +175,44 @@ class MainActivity : AppCompatActivity() {
                 super.onPageStarted(view, url, favicon)
                 view?.let { tabManager.onPageStarted?.invoke(it, url) }
             }
-            
+
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 tabManager.onPageFinished?.invoke(view, url)
-                
+
                 val tabIndex = tabManager.tabs.value.indexOfFirst { it.webView === view }
                 if (tabIndex >= 0) {
                     tabManager.updateTabTitle(tabIndex, view.title ?: "Untitled")
                     tabManager.updateTabUrl(tabIndex, url)
-                }   
-            
-                // Inject Eruda script. Do NOT auto-init; app controls visibility per tab.
+                }
+
+                // Hook console methods so the native DevTools panel receives logs.
                 val script = """
                     (function () {
-                        if (window.eruda) return;
-                        var define;
-                        if (window.define) {
-                            define = window.define;
-                            window.define = null;
-                        }
-                        var script = document.createElement('script'); 
-                        script.src = 'https://cdn.jsdelivr.net/npm/eruda/eruda.js'; 
-                        document.body.appendChild(script); 
-                        script.onload = function () { 
-                            if (define) {
-                                window.define = define;
-                            }
-                            if (window.ErudaAndroid) {
-                                var _orig = {};
-                                ['log','warn','error','info','debug'].forEach(function(lvl) {
-                                    _orig[lvl] = console[lvl].bind(console);
-                                });
-                                ['log','warn','error','info','debug'].forEach(function(lvl) {
-                                    (function(l, orig) {
-                                        console[l] = function() {
-                                            orig.apply(console, arguments);
-                                            try {
-                                                var msg = Array.prototype.slice.call(arguments).map(function(a) {
-                                                    try { return typeof a === 'string' ? a : JSON.stringify(a); }
-                                                    catch(e) { return String(a); }
-                                                }).join(' ');
-                                                window.ErudaAndroid.storeLog(l, msg);
-                                            } catch(e) {}
-                                        };
-                                    })(lvl, _orig[lvl]);
-                                });
-                                try {
-                                    var stored = JSON.parse(window.ErudaAndroid.getLogs() || '[]');
-                                    stored.forEach(function(entry) {
-                                        var lvl = entry.level;
-                                        if (_orig[lvl]) {
-                                            _orig[lvl](
-                                                '\u23f0 ' +
-                                                new Date(parseInt(entry.time, 10)).toLocaleTimeString() +
-                                                ' ' + entry.args
-                                            );
-                                        }
-                                    });
-                                } catch(e) {}
-                            }
-                        }
+                        if (window.__devtoolsHooked) return;
+                        window.__devtoolsHooked = true;
+                        if (!window.DevToolsAndroid) return;
+                        var _orig = {};
+                        ['log','warn','error','info','debug'].forEach(function(lvl) {
+                            _orig[lvl] = console[lvl].bind(console);
+                        });
+                        ['log','warn','error','info','debug'].forEach(function(lvl) {
+                            (function(l, orig) {
+                                console[l] = function() {
+                                    orig.apply(console, arguments);
+                                    try {
+                                        var msg = Array.prototype.slice.call(arguments).map(function(a) {
+                                            try { return typeof a === 'string' ? a : JSON.stringify(a); }
+                                            catch(e) { return String(a); }
+                                        }).join(' ');
+                                        window.DevToolsAndroid.storeLog(l, msg);
+                                    } catch(e) {}
+                                };
+                            })(lvl, _orig[lvl]);
+                        });
                     })();
                 """
                 view.evaluateJavascript(script) {}
-            
-                // Restore per-tab devtools state after page load
-                val tab = tabManager.tabs.value.getOrNull(tabIndex)
-                if (tab?.devToolsVisible == true) {
-                    view.evaluateJavascript("if(window.eruda){try{eruda.init();}catch(e){}}") {}
-                }
             }
         }
 
@@ -316,8 +243,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.addJavascriptInterface(ErudaBridge(), "ErudaAndroid")
-        
+        webView.addJavascriptInterface(DevToolsBridge(), "DevToolsAndroid")
+
         return webView
     }
 
@@ -358,26 +285,6 @@ class MainActivity : AppCompatActivity() {
             WebResourceResponse(mimeType, "utf-8", java.io.FileInputStream(file))
         } catch (e: Exception) {
             Log.e(TAG, "Error serving file URL: ${e.message}")
-            null
-        }
-    }
-
-    private fun serveCachedErudaScript(): WebResourceResponse? {
-        val headers = mapOf("Access-Control-Allow-Origin" to "*")
-        
-        return try {
-            // Read directly from local assets. No network, no cache expiry.
-            val inputStream = assets.open("eruda.js")
-            WebResourceResponse(
-                "application/javascript", 
-                "utf-8", 
-                200, 
-                "OK",
-                headers, 
-                inputStream
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load eruda from assets: ${e.message}")
             null
         }
     }
@@ -437,7 +344,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        // Simplified for Compose - keyboard handling is done in Compose
         return super.dispatchTouchEvent(event)
     }
 }
