@@ -20,6 +20,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,15 +48,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
 fun BrowserToolbar(
-    currentUrl: String,
-    displayText: String,
+    committedUrl: String,
     tabCount: Int,
+    suggestions: List<String>,
     onUrlSubmit: (String) -> Unit,
+    onQueryChange: (String) -> Unit,
     onHomeClick: () -> Unit,
     onNewTabClick: () -> Unit,
     onTabCountClick: () -> Unit,
@@ -73,7 +77,6 @@ fun BrowserToolbar(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hide "G" when typing
             AnimatedVisibility(visible = !isOmniboxFocused) {
                 Text(
                     text = "G",
@@ -87,15 +90,16 @@ fun BrowserToolbar(
             }
 
             Omnibox(
-                url = displayText,
+                committedUrl = committedUrl,
+                suggestions = suggestions,
                 onUrlSubmit = onUrlSubmit,
+                onQueryChange = onQueryChange,
                 onFocusChanged = { isOmniboxFocused = it },
                 modifier = Modifier.weight(1f)
             )
 
             Spacer(Modifier.width(12.dp))
 
-            // Hide action buttons when typing
             AnimatedVisibility(visible = !isOmniboxFocused) {
                 Row {
                     IconButton(onClick = onNewTabClick, modifier = Modifier.size(36.dp)) {
@@ -123,67 +127,113 @@ fun BrowserToolbar(
 
 @Composable
 private fun Omnibox(
-    url: String,
+    committedUrl: String,
+    suggestions: List<String>,
     onUrlSubmit: (String) -> Unit,
+    onQueryChange: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var inputText by rememberSaveable(url) { mutableStateOf(url) }
+    // "Draft" text is what the user is currently typing
+    var draftText by rememberSaveable { mutableStateOf(committedUrl) }
+    var isFocused by remember { mutableStateOf(false) }
+    
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    // Sync input text when URL changes externally (e.g. clicking a link)
-    LaunchedEffect(url) {
-        inputText = url
+    // Sync from external URL changes (e.g. navigating via links)
+    // Only sync if we aren't currently focused/editing
+    LaunchedEffect(committedUrl, isFocused) {
+        if (!isFocused) {
+            draftText = committedUrl
+        }
     }
 
-    Box(
-        modifier = modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { focusRequester.requestFocus() }
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        if (inputText.isEmpty()) {
-            Text(
-                text = "Search or type URL",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { focusRequester.requestFocus() }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (draftText.isEmpty()) {
+                Text(
+                    text = "Search or type URL",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            BasicTextField(
+                value = draftText,
+                onValueChange = { newText ->
+                    draftText = newText
+                    onQueryChange(newText)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { state ->
+                        isFocused = state.isFocused
+                        onFocusChanged(state.isFocused)
+                        
+                        if (state.isFocused) {
+                            draftText = "" // CLEAR on focus
+                        } else {
+                            // BLUR: Revert to committed URL if user didn't submit
+                            draftText = committedUrl
+                        }
+                    },
+                textStyle = TextStyle(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Go
+                ),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        onUrlSubmit(draftText)
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }
+                ),
+                singleLine = true
             )
         }
 
-        BasicTextField(
-            value = inputText,
-            onValueChange = { inputText = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onFocusChanged { focusState ->
-                    onFocusChanged(focusState.isFocused)
-                },
-            textStyle = TextStyle(
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go
-            ),
-            keyboardActions = KeyboardActions(
-                onGo = {
-                    onUrlSubmit(inputText)
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                }
-            ),
-            singleLine = true
-        )
+        // Suggestions Dropdown
+        DropdownMenu(
+            expanded = isFocused && suggestions.isNotEmpty(),
+            onDismissRequest = { },
+            offset = DpOffset(0.dp, 8.dp)
+        ) {
+            suggestions.forEach { suggestion ->
+                DropdownMenuItem(
+                    text = { 
+                        Text(
+                            text = suggestion, 
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ) 
+                    },
+                    onClick = {
+                        onUrlSubmit(suggestion)
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -212,10 +262,11 @@ private fun TabCountBox(count: Int, onClick: () -> Unit) {
 private fun BrowserToolbarPreview() {
     MaterialTheme {
         BrowserToolbar(
-            currentUrl = "github.com",
-            displayText = "github.com",
+            committedUrl = "github.com",
             tabCount = 1,
+            suggestions = listOf("github", "github copilot"),
             onUrlSubmit = {},
+            onQueryChange = {},
             onHomeClick = {},
             onNewTabClick = {},
             onTabCountClick = {},
