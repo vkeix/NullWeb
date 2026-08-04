@@ -230,9 +230,13 @@ private fun PageRow(
 }
 
 @Composable
-private fun SettingsRow(label: String, onClick: () -> Unit) {
+private fun SettingsRow(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
