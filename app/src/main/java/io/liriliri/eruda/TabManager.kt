@@ -68,11 +68,21 @@ class TabManager(private val webViewFactory: () -> WebView) {
     }
     
     fun switchToTab(index: Int) {
-        if (index in _tabs.value.indices) {
-            _activeTabIndex.value = index
-        }
-    }
-    
+	    if (index in _tabs.value.indices) {
+	        val previousIndex = _activeTabIndex.value
+	        val tabsList = _tabs.value
+	        
+	        // 1. Pause the old tab to stop background JS, timers, and video
+	        tabsList.getOrNull(previousIndex)?.webView?.onPause()
+	        
+	        // 2. Switch the index
+	        _activeTabIndex.value = index
+	        
+	        // 3. Resume the new tab
+	        tabsList[index].webView.onResume()
+	    }
+	}
+	    
     fun updateTabTitle(index: Int, title: String) {
         val tabs = _tabs.value.toMutableList()
         if (index in tabs.indices) {
