@@ -1,5 +1,7 @@
 package io.liriliri.eruda.ui
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,6 +42,7 @@ import io.liriliri.eruda.TabManager
 @Composable
 fun TabSwitcherOverlay(
     tabs: List<TabManager.Tab>,
+    thumbnails: Map<Long, Bitmap>,
     activeTabIndex: Int,
     onTabClick: (Int) -> Unit,
     onTabClose: (Int) -> Unit,
@@ -73,9 +79,9 @@ fun TabSwitcherOverlay(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -84,6 +90,7 @@ fun TabSwitcherOverlay(
                 itemsIndexed(tabs) { index, tab ->
                     TabCard(
                         tab = tab,
+                        preview = thumbnails[tab.id],
                         isActive = index == activeTabIndex,
                         onClick = { onTabClick(index) },
                         onClose = { onTabClose(index) }
@@ -97,31 +104,49 @@ fun TabSwitcherOverlay(
 @Composable
 private fun TabCard(
     tab: TabManager.Tab,
+    preview: Bitmap?,
     isActive: Boolean,
     onClick: () -> Unit,
     onClose: () -> Unit
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(220.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isActive) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface
-            )
+            .background(MaterialTheme.colorScheme.surface)
             .border(
-                width = if (isActive) 2.dp else 0.dp,
-                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                width = 2.dp,
+                color = if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
+                .fillMaxWidth()
+                .weight(1f)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
         ) {
+            if (preview != null) {
+                Image(
+                    bitmap = preview.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = (tab.title.firstOrNull()?.uppercase() ?: "?"),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Column(Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -129,32 +154,26 @@ private fun TabCard(
             ) {
                 Text(
                     text = tab.title,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(24.dp)
-                ) {
+                IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Close tab",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
             Text(
                 text = tab.url,
-                fontSize = 13.sp,
-                maxLines = 3,
+                fontSize = 11.sp,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
