@@ -1,3 +1,4 @@
+
 package io.liriliri.eruda
 
 import android.util.Log
@@ -47,6 +48,7 @@ fun BrowserScreen(
     val resolveAndLoad: (String) -> Unit = { input ->
         var url = input.trim()
         var display = url
+        var isValid = true
 
         if (!isHttpUrl(url) && !isFileUrl(url)) {
             if (mayBeUrl(url)) {
@@ -59,14 +61,16 @@ fun BrowserScreen(
                     history = searchHistory.all()
                 } catch (e: Exception) {
                     Log.e("BrowserScreen", "Failed to encode search query", e)
-                    return@resolveAndLoad
+                    isValid = false
                 }
             }
         }
 
-        viewModel.updateDisplayText(display)
-        tabManager.loadUrl(url)
-        focusManager.clearFocus()
+        if (isValid) {
+            viewModel.updateDisplayText(display)
+            tabManager.loadUrl(url)
+            focusManager.clearFocus()
+        }
     }
 
     BackHandler(
