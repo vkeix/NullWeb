@@ -31,6 +31,10 @@ import io.liriliri.eruda.ui.SettingsScreen
 import io.liriliri.eruda.ui.StartPage
 import io.liriliri.eruda.ui.SuggestionOverlay
 import io.liriliri.eruda.ui.TabSwitcherOverlay
+
+import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.HistoryStore
+import io.liriliri.eruda.store.SearchHistory
 import java.net.URLEncoder
 
 @Composable
