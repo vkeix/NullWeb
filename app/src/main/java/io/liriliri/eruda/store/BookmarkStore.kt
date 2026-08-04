@@ -28,7 +28,8 @@ class BookmarkStore(context: Context) {
     /** Returns true if the bookmark was added, false if it was removed. */
     fun toggle(title: String, url: String): Boolean {
         val current = all().toMutableList()
-        return if (current.removeAll { it.url == url } > 0) {
+        val removed = current.removeAll { it.url == url }
+        return if (removed) {
             save(current)
             false
         } else {
