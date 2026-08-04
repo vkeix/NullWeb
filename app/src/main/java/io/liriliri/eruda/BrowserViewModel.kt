@@ -15,7 +15,7 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.net.URLEncoder
 
-enum class BrowserPage { History, Bookmarks, Downloads, Settings }
+enum class BrowserPage { History, Bookmarks, Downloads, Settings, DevTools }
 
 class BrowserViewModel : ViewModel() {
 
