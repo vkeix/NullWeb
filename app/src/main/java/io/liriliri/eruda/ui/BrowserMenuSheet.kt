@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.Download
@@ -37,13 +41,19 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun BrowserMenuSheet(
     isDesktopMode: Boolean,
+    canGoBack: Boolean,
+    canGoForward: Boolean,
     onDismiss: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenBookmarks: () -> Unit,
     onOpenDownloads: () -> Unit,
     onBookmarkPage: () -> Unit,
     onToggleDesktopMode: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onShare: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -80,6 +90,18 @@ fun BrowserMenuSheet(
             Spacer(Modifier.height(8.dp))
 
             SheetRow(Icons.Outlined.Settings, "Settings", onClick = onOpenSettings)
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                NavItem(Icons.Filled.ArrowBack, "Back", canGoBack, Modifier.weight(1f), onBack)
+                NavItem(Icons.Filled.ArrowForward, "Forward", canGoForward, Modifier.weight(1f), onForward)
+                NavItem(Icons.Filled.Share, "Share", true, Modifier.weight(1f), onShare)
+                NavItem(Icons.Filled.Refresh, "Refresh", true, Modifier.weight(1f), onRefresh)
+            }
         }
     }
 }
@@ -160,5 +182,38 @@ private fun SheetRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun NavItem(
+    icon: ImageVector,
+    label: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 10.dp)
+    ) {
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        )
     }
 }
