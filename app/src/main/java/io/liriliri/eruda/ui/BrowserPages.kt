@@ -32,8 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.liriliri.eruda.BookmarkStore
-import io.liriliri.eruda.HistoryStore
+
+import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.HistoryStore
 
 @Composable
 fun HistoryScreen(
