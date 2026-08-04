@@ -59,7 +59,7 @@ fun BrowserScreen(
                     history = searchHistory.all()
                 } catch (e: Exception) {
                     Log.e("BrowserScreen", "Failed to encode search query", e)
-                    return@BrowserScreen
+                    return@resolveAndLoad
                 }
             }
         }
