@@ -198,3 +198,41 @@ private fun Omnibox(
         )
     }
 }
+
+@Composable
+private fun TabCountBox(count: Int, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .size(32.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 99) "∞" else count.toString(),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BrowserToolbarPreview() {
+    MaterialTheme {
+        BrowserToolbar(
+            committedUrl = "github.com",
+            tabCount = 1,
+            onUrlSubmit = {},
+            onQueryChange = {},
+            onFocusChanged = {},
+            onHomeClick = {},
+            onNewTabClick = {},
+            onTabCountClick = {},
+            onMenuClick = {}
+        )
+    }
+}
