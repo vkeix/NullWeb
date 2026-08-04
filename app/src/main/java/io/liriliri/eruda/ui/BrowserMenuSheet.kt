@@ -3,6 +3,7 @@ package io.liriliri.eruda.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,7 +52,7 @@ fun BrowserMenuSheet(
     onOpenDownloads: () -> Unit,
     onBookmarkPage: () -> Unit,
     onToggleDesktopMode: () -> Unit,
-    onToggleDevTools: () -> Unit,
+    onOpenDevTools: () -> Unit,
     onOpenSettings: () -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -68,21 +69,22 @@ fun BrowserMenuSheet(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
-            // Group 1: tiles row — outer rounding only
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 SheetTile(Icons.Outlined.History, "History", Modifier.weight(1f), onOpenHistory)
+                TileDivider()
                 SheetTile(Icons.Outlined.Bookmark, "Bookmarks", Modifier.weight(1f), onOpenBookmarks)
+                TileDivider()
                 SheetTile(Icons.Outlined.Download, "Downloads", Modifier.weight(1f), onOpenDownloads)
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Group 2: vertical menu — outer rounding only
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -98,18 +100,13 @@ fun BrowserMenuSheet(
                     onClick = onToggleDesktopMode
                 )
                 GroupDivider()
-                SheetRow(
-                    Icons.Outlined.Code,
-                    "Developer tools",
-                    onClick = onToggleDevTools
-                )
+                SheetRow(Icons.Outlined.Code, "Developer tools", onClick = onOpenDevTools)
                 GroupDivider()
                 SheetRow(Icons.Outlined.Settings, "Settings", onClick = onOpenSettings)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Nav row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -125,9 +122,16 @@ fun BrowserMenuSheet(
 
 @Composable
 private fun GroupDivider() {
-    HorizontalDivider(
-        thickness = 1.dp,
-        color = MaterialTheme.colorScheme.surface
+    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.surface)
+}
+
+@Composable
+private fun TileDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(44.dp)
+            .background(MaterialTheme.colorScheme.surface)
     )
 }
 
@@ -142,18 +146,18 @@ private fun SheetTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp)
+            .padding(vertical = 16.dp)
     ) {
         Icon(
             icon,
             contentDescription = label,
             tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             text = label,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -171,19 +175,19 @@ private fun SheetRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(Modifier.width(16.dp))
         Text(
             text = label,
-            fontSize = 15.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
