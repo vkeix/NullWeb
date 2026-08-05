@@ -16,6 +16,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,6 +32,10 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/nullweb-release.jks
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -35,13 +44,16 @@ jobs:
 
       - name: Get version info
         id: version
+        shell: bash
         run: |
           VERSION=$(./gradlew -q printVersionName 2>/dev/null || grep -oP '(?<=versionName ")[^"]+' app/build.gradle | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # Extract only the current version section from CHANGELOG.md
+
           awk "/^## $VERSION/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md > /tmp/release_notes.md
-          # Fall back to full changelog if no section found
-          if [ ! -s /tmp/release_notes.md ]; then cp CHANGELOG.md /tmp/release_notes.md; fi
+
+          if [ ! -s /tmp/release_notes.md ]; then
+            cp CHANGELOG.md /tmp/release_notes.md
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
