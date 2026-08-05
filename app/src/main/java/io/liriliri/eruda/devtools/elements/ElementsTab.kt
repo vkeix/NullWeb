@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.liriliri.eruda.devtools.DetailSection
+import io.liriliri.eruda.devtools.EmptyNote
+import io.liriliri.eruda.devtools.KVRow
 import io.liriliri.eruda.devtools.decodeJsString
 import io.liriliri.eruda.devtools.parsePairs
 import org.json.JSONObject
