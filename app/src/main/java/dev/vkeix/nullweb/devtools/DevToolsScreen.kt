@@ -33,14 +33,7 @@ import dev.vkeix.nullweb.devtools.snippets.SnippetsTab
 import dev.vkeix.nullweb.devtools.sources.SourcesTab
 
 private val TABS = listOf(
-    "Console",
-    "Elements",
-    "Network",
-    "Resources",
-    "Sources",
-    "Info",
-    "Snippets",
-    "Settings"
+    "Console", "Elements", "Network", "Resources", "Sources", "Info", "Snippets", "Settings"
 )
 
 @Composable
@@ -51,6 +44,7 @@ fun DevToolsScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var sourceUrl by remember { mutableStateOf<String?>(null) }
+    var inlineSource by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     Column(
         modifier = Modifier
@@ -65,11 +59,7 @@ fun DevToolsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(
-                    Icons.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
+                Icon(Icons.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
                 text = "Developer tools",
@@ -106,11 +96,20 @@ fun DevToolsScreen(
             0 -> ConsoleTab(webView)
             1 -> ElementsTab(webView)
             2 -> NetworkTab()
-            3 -> ResourcesTab(webView) { url ->
-                sourceUrl = url
-                selectedTab = 4
-            }
-            4 -> SourcesTab(webView, sourceUrl)
+            3 -> ResourcesTab(
+                webView = webView,
+                onViewSource = { url ->
+                    inlineSource = null
+                    sourceUrl = url
+                    selectedTab = 4
+                },
+                onViewContent = { title, content ->
+                    sourceUrl = null
+                    inlineSource = title to content
+                    selectedTab = 4
+                }
+            )
+            4 -> SourcesTab(webView, sourceUrl, inlineSource)
             5 -> InfoTab(webView)
             6 -> SnippetsTab(webView, snippetStore)
             7 -> SettingsTab()
