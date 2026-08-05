@@ -3,6 +3,7 @@ package io.liriliri.eruda.store
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Calendar
 
 class HistoryStore(context: Context) {
 
@@ -38,6 +39,11 @@ class HistoryStore(context: Context) {
         save(all().filterNot { it.time == entry.time })
     }
 
+    fun removeAll(entries: List<Entry>) {
+        val times = entries.map { it.time }.toSet()
+        save(all().filterNot { times.contains(it.time) })
+    }
+
     fun clear() {
         prefs.edit().remove(KEY).apply()
     }
@@ -57,5 +63,44 @@ class HistoryStore(context: Context) {
     companion object {
         private const val KEY = "history"
         private const val MAX_ENTRIES = 200
+    }
+}
+
+object HistoryRanges {
+
+    val labels = listOf("Last hour", "Today", "Yesterday", "Last 7 days", "Older")
+
+    private const val HOUR = 3_600_000L
+    private const val DAY = 86_400_000L
+
+    fun bucket(time: Long): Int {
+        val startToday = startOfToday()
+        return when {
+            time >= System.currentTimeMillis() - HOUR -> 0
+            time >= startToday -> 1
+            time >= startToday - DAY -> 2
+            time >= startToday - 6 * DAY -> 3
+            else -> 4
+        }
+    }
+
+    /** Cutoff for delete dialog options: 0 = last hour, 1 = today, 2 = last 7 days, 3 = all */
+    fun deleteCutoff(option: Int): Long {
+        val startToday = startOfToday()
+        return when (option) {
+            0 -> System.currentTimeMillis() - HOUR
+            1 -> startToday
+            2 -> startToday - 6 * DAY
+            else -> -1L
+        }
+    }
+
+    private fun startOfToday(): Long {
+        return Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
     }
 }
