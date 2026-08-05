@@ -567,6 +567,23 @@ private val DEVTOOLS_AGENT = """
             },
             source: function(url){
                 return fetch(url).then(function(r){ return r.text(); }).then(function(t){ return t.substring(0,50000); }).catch(function(e){ return 'Failed: '+e; });
+            },
+            html: function(path){
+                var el = byPath(path);
+                return el ? el.outerHTML.substring(0, 20000) : '';
+            },
+            highlight: function(path){
+                var old = document.getElementById('__dt_hl');
+                if (old) old.remove();
+                var el = byPath(path);
+                if (!el) return '0';
+                var r = el.getBoundingClientRect();
+                var d = document.createElement('div');
+                d.id = '__dt_hl';
+                d.style.cssText = 'position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;outline:2px solid #7C4DFF;background:rgba(124,77,255,.2);z-index:2147483647;pointer-events:none;';
+                document.documentElement.appendChild(d);
+                setTimeout(function(){ d.remove(); }, 2500);
+                return '1';
             }
         };
     })();
