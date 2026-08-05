@@ -111,7 +111,7 @@ fun DevToolsScreen(
                 sourceUrl = url
                 selectedTab = 4
             }
-            4 -> SourcesTab(webView, initialUrl = sourceUrl)
+            4 -> SourcesTab(webView, sourceUrl)
             5 -> InfoTab(webView)
             6 -> SnippetsTab(webView, snippetStore)
             7 -> SettingsTab()
