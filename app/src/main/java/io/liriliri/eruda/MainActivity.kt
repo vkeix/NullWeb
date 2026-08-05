@@ -31,10 +31,15 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
 
+// Store
 import io.liriliri.eruda.store.BookmarkStore
 import io.liriliri.eruda.store.DownloadStore
 import io.liriliri.eruda.store.HistoryStore
 import io.liriliri.eruda.store.SearchHistory
+import io.liriliri.eruda.store.SnippetStore
+
+// Browser
+import io.liriliri.eruda.browser.BrowserScreen
 
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager
