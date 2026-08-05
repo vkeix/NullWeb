@@ -250,7 +250,12 @@ fun BrowserScreen(
                             viewModel.hideTabSwitcher()
                         },
                         onTabClose = { tabManager.closeTab(it) },
-                        onGroupTabs = { a, b -> tabManager.groupTabs(a, b) },
+                        onCreateGroup = { a, b, name, color ->
+                            tabManager.createGroup(a, b, name, color)
+                        },
+                        onAddToGroup = { tabId, groupId ->
+                            tabManager.addToGroup(tabId, groupId)
+                        },
                         onDissolveGroup = { tabManager.dissolveGroup(it) },
                         onClose = { viewModel.hideTabSwitcher() }
                     )
