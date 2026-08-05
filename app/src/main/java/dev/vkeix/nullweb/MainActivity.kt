@@ -554,7 +554,7 @@ private val DEVTOOLS_AGENT = """
                     local: store(localStorage), session: store(sessionStorage), cookies: cookies,
                     scripts: list('script[src]','src'), styles: list('link[rel="stylesheet"]','href'),
                     iframes: list('iframe[src]','src'),
-                    images: Array.prototype.map.call(document.images, function(i){ return i.src; })
+                    images: Array.prototype.map.call(document.images, function(i){ return i.currentSrc || i.src; }).filter(function(x){ return x; })
                 });
             },
             info: function(){
