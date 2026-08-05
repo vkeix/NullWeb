@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.liriliri.eruda.SnippetStore
+import io.liriliri.eruda.store.SnippetStore
 import io.liriliri.eruda.devtools.console.ConsoleTab
 import io.liriliri.eruda.devtools.elements.ElementsTab
 import io.liriliri.eruda.devtools.info.InfoTab
@@ -51,6 +51,7 @@ fun DevToolsScreen(
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var sourceUrl by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -106,8 +107,11 @@ fun DevToolsScreen(
             0 -> ConsoleTab(webView)
             1 -> ElementsTab(webView)
             2 -> NetworkTab()
-            3 -> ResourcesTab(webView) { selectedTab = 4 }
-            4 -> SourcesTab(webView)
+            3 -> ResourcesTab(webView) { url ->
+                sourceUrl = url
+                selectedTab = 4
+            }
+            4 -> SourcesTab(webView, initialUrl = sourceUrl)
             5 -> InfoTab(webView)
             6 -> SnippetsTab(webView, snippetStore)
             7 -> SettingsTab()
