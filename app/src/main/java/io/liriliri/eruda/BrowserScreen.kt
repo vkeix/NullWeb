@@ -2,6 +2,7 @@ package io.liriliri.eruda
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.DownloadStore
 import io.liriliri.eruda.store.HistoryStore
 import io.liriliri.eruda.store.SearchHistory
 import io.liriliri.eruda.ui.BookmarksScreen
@@ -34,6 +36,7 @@ import io.liriliri.eruda.ui.SettingsScreen
 import io.liriliri.eruda.ui.StartPage
 import io.liriliri.eruda.ui.SuggestionOverlay
 import io.liriliri.eruda.ui.TabSwitcherOverlay
+import java.io.File
 import java.net.URLEncoder
 
 @Composable
@@ -43,6 +46,7 @@ fun BrowserScreen(
     historyStore: HistoryStore,
     bookmarkStore: BookmarkStore,
     snippetStore: SnippetStore,
+    downloadStore: DownloadStore,
     viewModel: BrowserViewModel = viewModel()
 ) {
     val displayText by viewModel.displayText.collectAsState()
@@ -62,6 +66,7 @@ fun BrowserScreen(
     var searchEntries by remember { mutableStateOf(searchHistory.all()) }
     var historyEntries by remember { mutableStateOf(historyStore.all()) }
     var bookmarks by remember { mutableStateOf(bookmarkStore.all()) }
+    var downloads by remember { mutableStateOf(downloadStore.all()) }
 
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -128,6 +133,7 @@ fun BrowserScreen(
         when (openPage) {
             BrowserPage.History -> historyEntries = historyStore.all()
             BrowserPage.Bookmarks -> bookmarks = bookmarkStore.all()
+            BrowserPage.Downloads -> downloads = downloadStore.all()
             else -> {}
         }
     }
@@ -278,9 +284,9 @@ fun BrowserScreen(
                     historyStore.remove(entry)
                     historyEntries = historyStore.all()
                 },
-                onClearAll = {
-                    historyStore.clear()
-                    historyEntries = emptyList()
+                onRemoveMany = { list ->
+                    historyStore.removeAll(list)
+                    historyEntries = historyStore.all()
                 }
             )
             BrowserPage.Bookmarks -> BookmarksScreen(
@@ -295,7 +301,19 @@ fun BrowserScreen(
                     bookmarks = bookmarkStore.all()
                 }
             )
-            BrowserPage.Downloads -> DownloadsScreen(onBack = { viewModel.closePage() })
+            BrowserPage.Downloads -> DownloadsScreen(
+                entries = downloads,
+                onBack = { viewModel.closePage() },
+                onDelete = { entry ->
+                    File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                        entry.name
+                    ).delete()
+                    downloadStore.remove(entry)
+                    downloads = downloadStore.all()
+                    Toast.makeText(context, "Download removed", Toast.LENGTH_SHORT).show()
+                }
+            )
             BrowserPage.Settings -> SettingsScreen(
                 onBack = { viewModel.closePage() },
                 onClearHistory = {
