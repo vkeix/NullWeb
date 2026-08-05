@@ -30,9 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.vkeix.nullweb.devtools.shared.DetailSection
-import dev.vkeix.nullweb.devtools.shared.EmptyNote
-import dev.vkeix.nullweb.devtools.shared.decodeJsString
+import dev.vkeix.nullweb.devtools.DetailSection
+import dev.vkeix.nullweb.devtools.EmptyNote
+import dev.vkeix.nullweb.devtools.decodeJsString
 import org.json.JSONObject
 
 @Composable
@@ -69,13 +69,13 @@ fun SourcesTab(webView: WebView?, initialUrl: String? = null) {
     if (viewing != null) {
         val (type, url) = viewing!!
         var source by remember { mutableStateOf("Loading...") }
-        
+
         LaunchedEffect(url) {
             webView?.evaluateJavascript("""
                 (function() {
                     return fetch('$url')
-                        .then(r => r.text())
-                        .catch(e => 'Error: ' + e.message);
+                        .then(function(r) { return r.text(); })
+                        .catch(function(e) { return 'Error: ' + e.message; });
                 })()
             """.trimIndent()) { result ->
                 source = decodeJsString(result) ?: "Failed to load"
@@ -117,7 +117,7 @@ fun SourcesTab(webView: WebView?, initialUrl: String? = null) {
             modifier = Modifier.fillMaxSize()
         ) {
             DetailSection("Scripts & Stylesheets")
-            
+
             if (items.isEmpty()) {
                 EmptyNote("No sources found")
             } else {
@@ -134,7 +134,7 @@ fun SourcesTab(webView: WebView?, initialUrl: String? = null) {
                                 text = type,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (type == "JS") MaterialTheme.colorScheme.primary 
+                                color = if (type == "JS") MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.width(36.dp)
                             )
