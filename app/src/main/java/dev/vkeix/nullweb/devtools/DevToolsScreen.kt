@@ -29,7 +29,6 @@ import dev.vkeix.nullweb.devtools.elements.ElementsTab
 import dev.vkeix.nullweb.devtools.info.InfoTab
 import dev.vkeix.nullweb.devtools.network.NetworkTab
 import dev.vkeix.nullweb.devtools.resources.ResourcesTab
-import dev.vkeix.nullweb.devtools.settings.SettingsTab
 import dev.vkeix.nullweb.devtools.snippets.SnippetsTab
 import dev.vkeix.nullweb.devtools.sources.SourcesTab
 
