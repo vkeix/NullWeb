@@ -35,9 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import dev.vkeix.nullweb.devtools.DetailSection
 import dev.vkeix.nullweb.devtools.EmptyNote
-import dev.vkeix.nullweb.devtools.KVRow
 import dev.vkeix.nullweb.devtools.ResourcesData
 import dev.vkeix.nullweb.devtools.SectionHeader
 import dev.vkeix.nullweb.devtools.decodeJsString
@@ -47,7 +45,11 @@ import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ResourcesTab(webView: WebView?, onViewSource: (String) -> Unit) {
+fun ResourcesTab(
+    webView: WebView?,
+    onViewSource: (String) -> Unit,
+    onViewContent: (String, String) -> Unit
+) {
     var data by remember { mutableStateOf<ResourcesData?>(null) }
     var refreshKey by remember { mutableStateOf(0) }
     var previewUrl by remember { mutableStateOf<String?>(null) }
@@ -88,18 +90,21 @@ fun ResourcesTab(webView: WebView?, onViewSource: (String) -> Unit) {
         item {
             SectionHeader("Local Storage", onRefresh = { refreshKey++ })
             if (d.local.isEmpty()) EmptyNote("Empty")
-            d.local.forEach { (k, v) -> KVRow(k, v) }
+            d.local.forEach { (k, v) -> StorageRow(k, v) { onViewContent(k, v) } }
         }
+
         item {
             SectionHeader("Session Storage", onRefresh = { refreshKey++ })
             if (d.session.isEmpty()) EmptyNote("Empty")
-            d.session.forEach { (k, v) -> KVRow(k, v) }
+            d.session.forEach { (k, v) -> StorageRow(k, v) { onViewContent(k, v) } }
         }
+
         item {
             SectionHeader("Cookies", onRefresh = { refreshKey++ })
             if (d.cookies.isEmpty()) EmptyNote("Empty")
-            d.cookies.forEach { (k, v) -> KVRow(k, v) }
+            d.cookies.forEach { (k, v) -> StorageRow(k, v) { onViewContent(k, v) } }
         }
+
         item {
             SectionHeader("Scripts", onRefresh = { refreshKey++ })
             if (d.scripts.isEmpty()) EmptyNote("Empty")
@@ -107,6 +112,7 @@ fun ResourcesTab(webView: WebView?, onViewSource: (String) -> Unit) {
                 ResourceRow(url = url, type = "JavaScript", onClick = { onViewSource(url) })
             }
         }
+
         item {
             SectionHeader("Stylesheets", onRefresh = { refreshKey++ })
             if (d.styles.isEmpty()) EmptyNote("Empty")
@@ -114,6 +120,7 @@ fun ResourcesTab(webView: WebView?, onViewSource: (String) -> Unit) {
                 ResourceRow(url = url, type = "CSS", onClick = { onViewSource(url) })
             }
         }
+
         item {
             SectionHeader("Iframes", onRefresh = { refreshKey++ })
             if (d.iframes.isEmpty()) EmptyNote("Empty")
@@ -121,6 +128,7 @@ fun ResourcesTab(webView: WebView?, onViewSource: (String) -> Unit) {
                 ResourceRow(url = url, type = "Iframe", onClick = { iframeSheet = url })
             }
         }
+
         item {
             SectionHeader("Images", onRefresh = { refreshKey++ })
             if (d.images.isEmpty()) EmptyNote("Empty")
@@ -232,6 +240,37 @@ private fun ResourceRow(url: String, type: String, onClick: () -> Unit) {
     }
 }
 
+@Composable
+private fun StorageRow(k: String, v: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = k,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace,
+            color = Color(0xFF64B5F6),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(120.dp)
+        )
+        Text(
+            text = v,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 private fun configurePreviewWebView(wv: WebView) {
     wv.settings.apply {
@@ -299,7 +338,6 @@ private fun ImagePreviewDialog(
                         WebView(ctx).apply {
                             configurePreviewWebView(this)
                             webViewClient = WebViewClient()
-                            // Document origin = the page, so the image host sees the right Referer
                             loadDataWithBaseURL(
                                 pageUrl.ifEmpty { null },
                                 html,
@@ -420,7 +458,6 @@ private fun IframeBottomSheet(
                                         if (failingUrl == url) loadError = true
                                     }
                                 }
-                                // Impersonate the page so referrer checks pass
                                 if (pageUrl.isNotEmpty()) {
                                     loadUrl(url, mapOf("Referer" to pageUrl))
                                 } else {
