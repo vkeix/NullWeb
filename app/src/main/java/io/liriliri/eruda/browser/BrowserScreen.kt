@@ -22,22 +22,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.io.File
+import java.net.URLEncoder
+
+// URL helpers from root package (MainActivity.kt)
+import io.liriliri.eruda.isHttpUrl
+import io.liriliri.eruda.isFileUrl
+import io.liriliri.eruda.mayBeUrl
+
+// Root package
+import io.liriliri.eruda.BrowserPage
+import io.liriliri.eruda.BrowserViewModel
+import io.liriliri.eruda.DevToolsBus
+
+// Tab
+import io.liriliri.eruda.tab.TabManager
+
+// Store
 import io.liriliri.eruda.store.BookmarkStore
 import io.liriliri.eruda.store.DownloadStore
 import io.liriliri.eruda.store.HistoryStore
 import io.liriliri.eruda.store.SearchHistory
-import io.liriliri.eruda.browser.BookmarksScreen
-import io.liriliri.eruda.browser.BrowserMenuSheet
-import io.liriliri.eruda.browser.BrowserToolbar
+import io.liriliri.eruda.store.SnippetStore
+
+// DevTools
 import io.liriliri.eruda.devtools.DevToolsScreen
-import io.liriliri.eruda.browser.DownloadsScreen
-import io.liriliri.eruda.browser.HistoryScreen
-import io.liriliri.eruda.browser.SettingsScreen
-import io.liriliri.eruda.browser.StartPage
-import io.liriliri.eruda.browser.SuggestionOverlay
-import io.liriliri.eruda.browser.TabSwitcherOverlay
-import java.io.File
-import java.net.URLEncoder
 
 @Composable
 fun BrowserScreen(
