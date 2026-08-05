@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
     <!-- READ_EXTERNAL_STORAGE suffices on Android 6–10 (API 23–29) for arbitrary files in shared storage -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
     <!-- Android 11+ (API 30+) requires "All Files Access" for non-media files such as HTML in Downloads -->
