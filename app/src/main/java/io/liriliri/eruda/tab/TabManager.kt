@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package io.liriliri.eruda.tab
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

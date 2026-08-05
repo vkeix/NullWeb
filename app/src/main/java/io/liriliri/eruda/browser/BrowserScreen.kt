@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package io.liriliri.eruda.browser
 
 import android.content.Intent
 import android.net.Uri
@@ -26,16 +26,16 @@ import io.liriliri.eruda.store.BookmarkStore
 import io.liriliri.eruda.store.DownloadStore
 import io.liriliri.eruda.store.HistoryStore
 import io.liriliri.eruda.store.SearchHistory
-import io.liriliri.eruda.ui.BookmarksScreen
-import io.liriliri.eruda.ui.BrowserMenuSheet
-import io.liriliri.eruda.ui.BrowserToolbar
-import io.liriliri.eruda.ui.DevToolsScreen
-import io.liriliri.eruda.ui.DownloadsScreen
-import io.liriliri.eruda.ui.HistoryScreen
-import io.liriliri.eruda.ui.SettingsScreen
-import io.liriliri.eruda.ui.StartPage
-import io.liriliri.eruda.ui.SuggestionOverlay
-import io.liriliri.eruda.ui.TabSwitcherOverlay
+import io.liriliri.eruda.browser.BookmarksScreen
+import io.liriliri.eruda.browser.BrowserMenuSheet
+import io.liriliri.eruda.browser.BrowserToolbar
+import io.liriliri.eruda.devtools.DevToolsScreen
+import io.liriliri.eruda.browser.DownloadsScreen
+import io.liriliri.eruda.browser.HistoryScreen
+import io.liriliri.eruda.browser.SettingsScreen
+import io.liriliri.eruda.browser.StartPage
+import io.liriliri.eruda.browser.SuggestionOverlay
+import io.liriliri.eruda.browser.TabSwitcherOverlay
 import java.io.File
 import java.net.URLEncoder
 

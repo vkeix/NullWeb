@@ -1,4 +1,4 @@
-package io.liriliri.eruda.ui
+package io.liriliri.eruda.browser
 
 import android.os.Environment
 import androidx.compose.foundation.background
