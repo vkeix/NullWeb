@@ -7,8 +7,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,9 +42,18 @@ fun ConsoleTab(webView: WebView?) {
     val logs by DevToolsBus.logs.collectAsState()
     var filter by remember { mutableStateOf("all") }
     var code by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
     val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
 
     val visible = logs.filter { filter == "all" || it.level == filter }
+
+    fun execute() {
+        if (code.isBlank()) return
+        val expr = "(function(){try{var __r=(function(){${code}})();return String(__r);}catch(e){return 'Error: '+e.message;}})()"
+        webView?.evaluateJavascript(expr) { result ->
+            DevToolsBus.pushLog("log", "← " + (decodeJsString(result) ?: "undefined"))
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -64,7 +76,12 @@ fun ConsoleTab(webView: WebView?) {
             }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { DevToolsBus.clearLogs() }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.Delete, "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Filled.Delete,
+                    "Clear",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
 
@@ -92,18 +109,13 @@ fun ConsoleTab(webView: WebView?) {
             }
         }
 
-        Spacer(Modifier.height(1.dp))
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant)
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (expanded) {
             TextField(
                 value = code,
                 onValueChange = { code = it },
-                placeholder = { Text("Execute JavaScript…", fontSize = 13.sp, fontFamily = FontFamily.Monospace) },
+                placeholder = { Text("// Write JavaScript…", fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -111,19 +123,48 @@ fun ConsoleTab(webView: WebView?) {
                     unfocusedIndicatorColor = Color.Transparent
                 ),
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(8.dp)
             )
-            IconButton(onClick = { code = "" }) {
-                Icon(Icons.Filled.Close, "Cancel", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { expanded = !expanded }) {
+                Icon(
+                    if (expanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.Code,
+                    contentDescription = "Toggle editor",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
             }
-            IconButton(onClick = {
-                if (code.isBlank()) return@IconButton
-                val expr = "(function(){try{var __r=(function(){${code}})();return String(__r);}catch(e){return 'Error: '+e.message;}})()"
-                webView?.evaluateJavascript(expr) { result ->
-                    DevToolsBus.pushLog("log", "← " + (decodeJsString(result) ?: "undefined"))
-                }
-            }) {
+            if (!expanded) {
+                TextField(
+                    value = code,
+                    onValueChange = { code = it },
+                    placeholder = { Text("Execute JavaScript…", fontSize = 13.sp, fontFamily = FontFamily.Monospace) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            IconButton(onClick = { code = "" }) {
+                Icon(Icons.Filled.Close, "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = { execute() }) {
                 Icon(Icons.Filled.PlayArrow, "Execute", tint = MaterialTheme.colorScheme.onBackground)
             }
         }
