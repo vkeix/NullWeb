@@ -244,11 +244,12 @@ private fun SheetAction(
 private fun buildSelector(root: DomNode?, path: String): String {
     if (root == null) return ""
     val parts = mutableListOf(root.selectorPart())
-    var node = root
+    var currentNode: DomNode = root
     path.split(".").filter { it.isNotEmpty() }.forEach { idx ->
         val i = idx.toIntOrNull() ?: return@forEach
-        node = node.children.getOrNull(i) ?: return parts.joinToString(" > ")
-        parts.add(node.selectorPart())
+        val next = currentNode.children.getOrNull(i) ?: return parts.joinToString(" > ")
+        currentNode = next
+        parts.add(next.selectorPart())
     }
     return parts.joinToString(" > ")
 }
