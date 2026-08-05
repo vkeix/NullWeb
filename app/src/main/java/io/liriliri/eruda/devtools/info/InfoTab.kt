@@ -45,23 +45,24 @@ fun InfoTab(webView: WebView?) {
         }
     }
 
+    val i = info
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
         SectionHeader("Page", onRefresh = { refreshKey++ })
-        if (info == null) {
+        if (i == null) {
             EmptyNote("No data")
         } else {
-            KVRow("url", info.url)
-            KVRow("title", info.title)
-            KVRow("charset", info.charset)
-            KVRow("doctype", info.doctype)
-            KVRow("language", info.lang)
-            KVRow("screen", info.screen)
-            KVRow("viewport", info.viewport)
-            KVRow("user-agent", info.ua)
+            KVRow("url", i.url)
+            KVRow("title", i.title)
+            KVRow("charset", i.charset)
+            KVRow("doctype", i.doctype)
+            KVRow("language", i.lang)
+            KVRow("screen", i.screen)
+            KVRow("viewport", i.viewport)
+            KVRow("user-agent", i.ua)
         }
     }
 }
