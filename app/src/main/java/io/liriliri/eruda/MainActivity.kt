@@ -2,6 +2,7 @@ package io.liriliri.eruda
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -31,6 +32,7 @@ import org.json.JSONObject
 import java.io.File
 
 import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.DownloadStore
 import io.liriliri.eruda.store.HistoryStore
 import io.liriliri.eruda.store.SearchHistory
 
@@ -40,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyStore: HistoryStore
     private lateinit var bookmarkStore: BookmarkStore
     private lateinit var snippetStore: SnippetStore
+    private lateinit var downloadStore: DownloadStore
     private val TAG = "NullWeb.MainActivity"
     var mFilePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileUrl: String? = null
@@ -88,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         historyStore = HistoryStore(this)
         bookmarkStore = BookmarkStore(this)
         snippetStore = SnippetStore(this)
+        downloadStore = DownloadStore(this)
 
         tabManager = TabManager { createConfiguredWebView() }
 
@@ -106,7 +110,14 @@ class MainActivity : AppCompatActivity() {
             }
 
             MaterialTheme(colorScheme = colorScheme) {
-                BrowserScreen(tabManager, searchHistory, historyStore, bookmarkStore, snippetStore)
+                BrowserScreen(
+                    tabManager,
+                    searchHistory,
+                    historyStore,
+                    bookmarkStore,
+                    snippetStore,
+                    downloadStore
+                )
             }
         }
     }
@@ -208,6 +219,8 @@ class MainActivity : AppCompatActivity() {
 
                 view.evaluateJavascript(DEVTOOLS_AGENT) {}
 
+                // Desktop mode: force a desktop-width viewport so responsive
+                // sites actually serve their desktop layout.
                 val isDesktop = tabManager.tabs.value.firstOrNull { it.webView === view }?.isDesktop == true
                 if (isDesktop) {
                     view.evaluateJavascript(
@@ -254,6 +267,21 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true
             }
+        }
+
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+            val request = DownloadManager.Request(Uri.parse(url))
+                .setMimeType(mimeType)
+                .addRequestHeader("User-Agent", userAgent)
+                .addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url) ?: "")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setTitle(fileName)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            val id = dm.enqueue(request)
+            downloadStore.add(DownloadStore.Entry(id, fileName, url, System.currentTimeMillis()))
+            Toast.makeText(this, "Downloading $fileName", Toast.LENGTH_SHORT).show()
         }
 
         webView.addJavascriptInterface(DevToolsBridge(), "DevToolsAndroid")
