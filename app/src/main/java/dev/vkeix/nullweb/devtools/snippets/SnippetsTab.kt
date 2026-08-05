@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.vkeix.nullweb.store.SnippetStore
-import dev.vkeix.nullweb.devtools.shared.DetailSection
+import dev.vkeix.nullweb.devtools.DetailSection
 
 @Composable
 fun SnippetsTab(webView: WebView?, snippetStore: SnippetStore) {
@@ -86,7 +86,7 @@ fun SnippetsTab(webView: WebView?, snippetStore: SnippetStore) {
                         showEditor = true
                     },
                     onDelete = {
-                        snippetStore.delete(name)
+                        snippetStore.remove(name)
                         snippets = snippetStore.all()
                     }
                 )
