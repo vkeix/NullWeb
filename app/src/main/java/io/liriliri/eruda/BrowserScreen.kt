@@ -61,6 +61,7 @@ fun BrowserScreen(
     val tabs by tabManager.tabs.collectAsState()
     val activeTabIndex by tabManager.activeTabIndex.collectAsState()
     val thumbnails by tabManager.thumbnails.collectAsState()
+    val groups by tabManager.groups.collectAsState()
 
     var isOmniboxFocused by remember { mutableStateOf(false) }
     var searchEntries by remember { mutableStateOf(searchHistory.all()) }
@@ -242,12 +243,15 @@ fun BrowserScreen(
                     TabSwitcherOverlay(
                         tabs = tabs,
                         thumbnails = thumbnails,
+                        groups = groups,
                         activeTabIndex = activeTabIndex,
                         onTabClick = { index ->
                             tabManager.switchToTab(index)
                             viewModel.hideTabSwitcher()
                         },
                         onTabClose = { tabManager.closeTab(it) },
+                        onGroupTabs = { a, b -> tabManager.groupTabs(a, b) },
+                        onDissolveGroup = { tabManager.dissolveGroup(it) },
                         onClose = { viewModel.hideTabSwitcher() }
                     )
                 }
