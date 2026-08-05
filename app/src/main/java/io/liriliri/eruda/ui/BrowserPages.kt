@@ -1,5 +1,6 @@
 package io.liriliri.eruda.ui
 
+import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -19,11 +20,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,24 +39,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import io.liriliri.eruda.store.BookmarkStore
+import io.liriliri.eruda.store.DownloadStore
+import io.liriliri.eruda.store.HistoryRanges
 import io.liriliri.eruda.store.HistoryStore
+import java.io.File
 
 @Composable
 fun HistoryScreen(
     entries: List<HistoryStore.Entry>,
     onBack: () -> Unit,
     onRemove: (HistoryStore.Entry) -> Unit,
-    onClearAll: () -> Unit
+    onRemoveMany: (List<HistoryStore.Entry>) -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     PageScaffold(
         title = "History",
         onBack = onBack,
         actions = {
             if (entries.isNotEmpty()) {
-                IconButton(onClick = onClearAll) {
-                    Icon(Icons.Outlined.Delete, "Clear history", tint = MaterialTheme.colorScheme.onBackground)
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(Icons.Outlined.Delete, "Delete history", tint = MaterialTheme.colorScheme.onBackground)
                 }
             }
         }
@@ -57,17 +69,96 @@ fun HistoryScreen(
             EmptyState("No history yet")
         } else {
             LazyColumn {
-                items(entries, key = { it.time }) { entry ->
-                    PageRow(
-                        letter = entry.url.hostnameInitial(),
-                        title = entry.title,
-                        subtitle = entry.url,
-                        onClose = { onRemove(entry) }
-                    )
+                HistoryRanges.labels.forEachIndexed { range, label ->
+                    val section = entries.filter { HistoryRanges.bucket(it.time) == range }
+                    if (section.isNotEmpty()) {
+                        item(key = "header$range") {
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                        items(section, key = { it.time }) { entry ->
+                            PageRow(
+                                letter = entry.url.hostnameInitial(),
+                                title = entry.title,
+                                subtitle = entry.url,
+                                onClose = { onRemove(entry) }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+
+    if (showDeleteDialog) {
+        RangeDeleteDialog(
+            onCancel = { showDeleteDialog = false },
+            onDelete = { option ->
+                val cutoff = HistoryRanges.deleteCutoff(option)
+                onRemoveMany(entries.filter { it.time >= cutoff })
+                showDeleteDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun RangeDeleteDialog(
+    onCancel: () -> Unit,
+    onDelete: (Int) -> Unit
+) {
+    var selected by remember { mutableStateOf(1) }
+    val options = listOf("Last hour", "Today", "Last 7 days", "All")
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Text(
+                text = "Delete history",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                options.forEachIndexed { index, label ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selected = index }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected == index,
+                            onClick = { selected = index }
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            text = label,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onDelete(selected) }) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -97,10 +188,86 @@ fun BookmarksScreen(
 }
 
 @Composable
-fun DownloadsScreen(onBack: () -> Unit) {
+fun DownloadsScreen(
+    entries: List<DownloadStore.Entry>,
+    onBack: () -> Unit,
+    onDelete: (DownloadStore.Entry) -> Unit
+) {
     PageScaffold(title = "Downloads", onBack = onBack) {
-        EmptyState("No downloads yet")
+        if (entries.isEmpty()) {
+            EmptyState("No downloads yet")
+        } else {
+            LazyColumn {
+                items(entries, key = { it.id }) { entry ->
+                    DownloadRow(entry, onDelete)
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun DownloadRow(
+    entry: DownloadStore.Entry,
+    onDelete: (DownloadStore.Entry) -> Unit
+) {
+    val file = remember(entry) {
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), entry.name)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = entry.name.substringAfterLast(".").take(3).uppercase(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Spacer(Modifier.size(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = entry.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${formatSize(file.length())} • ${entry.url.substringAfter("://").substringBefore("/")}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        IconButton(onClick = { onDelete(entry) }, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = "Delete download",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+private fun formatSize(bytes: Long): String = when {
+    bytes <= 0 -> "0 kB"
+    bytes < 1024 * 1024 -> "${bytes / 1024} kB"
+    else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
 }
 
 @Composable
