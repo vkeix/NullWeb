@@ -18,6 +18,9 @@ class TabManager(private val webViewFactory: () -> WebView) {
     private val _thumbnails = MutableStateFlow<Map<Long, Bitmap>>(emptyMap())
     val thumbnails: StateFlow<Map<Long, Bitmap>> = _thumbnails.asStateFlow()
 
+    private val _groups = MutableStateFlow<List<TabGroup>>(emptyList())
+    val groups: StateFlow<List<TabGroup>> = _groups.asStateFlow()
+
     val activeTab: Tab?
         get() = _tabs.value.getOrNull(_activeTabIndex.value)
 
@@ -57,6 +60,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
         removed.webView.destroy()
         _tabs.value = _tabs.value.filterIndexed { i, _ -> i != index }
         _thumbnails.value = _thumbnails.value - removed.id
+        pruneGroups()
 
         when {
             index < _activeTabIndex.value -> _activeTabIndex.value--
@@ -101,6 +105,28 @@ class TabManager(private val webViewFactory: () -> WebView) {
         tab.webView.reload()
     }
 
+    fun groupTabs(aId: Long, bId: Long) {
+        if (aId == bId) return
+        val tabs = _tabs.value
+        val a = tabs.firstOrNull { it.id == aId } ?: return
+        val b = tabs.firstOrNull { it.id == bId } ?: return
+
+        val groupId = a.groupId ?: b.groupId ?: System.currentTimeMillis()
+        if (_groups.value.none { it.id == groupId }) {
+            _groups.value = _groups.value + TabGroup(groupId, _groups.value.size)
+        }
+        _tabs.value = tabs.map { t ->
+            if (t.id == aId || t.id == bId) t.copy(groupId = groupId) else t
+        }
+    }
+
+    fun dissolveGroup(groupId: Long) {
+        _tabs.value = _tabs.value.map { t ->
+            if (t.groupId == groupId) t.copy(groupId = null) else t
+        }
+        _groups.value = _groups.value.filterNot { it.id == groupId }
+    }
+
     fun updateTabTitle(index: Int, title: String) {
         _tabs.value = _tabs.value.mapIndexed { i, tab ->
             if (i == index) tab.copy(title = title) else tab
@@ -117,7 +143,6 @@ class TabManager(private val webViewFactory: () -> WebView) {
         val tab = activeTab ?: return
         val webView = tab.webView
         if (webView.width <= 0 || webView.height <= 0) return
-        // Post to next frame so we capture the painted state
         webView.post {
             try {
                 val w = webView.width
@@ -136,6 +161,15 @@ class TabManager(private val webViewFactory: () -> WebView) {
             } catch (e: Exception) {
             }
         }
+    }
+
+    private fun pruneGroups() {
+        _groups.value.filter { g -> _tabs.value.count { it.groupId == g.id } < 2 }.forEach { g ->
+            _tabs.value = _tabs.value.map { t ->
+                if (t.groupId == g.id) t.copy(groupId = null) else t
+            }
+        }
+        _groups.value = _groups.value.filter { g -> _tabs.value.count { it.groupId == g.id } >= 2 }
     }
 
     private fun applyMode(webView: WebView, isDesktop: Boolean) {
@@ -165,7 +199,13 @@ class TabManager(private val webViewFactory: () -> WebView) {
         var title: String,
         var url: String,
         var isHome: Boolean = true,
-        var isDesktop: Boolean = false
+        var isDesktop: Boolean = false,
+        var groupId: Long? = null
+    )
+
+    data class TabGroup(
+        val id: Long,
+        val colorIndex: Int
     )
 
     companion object {
