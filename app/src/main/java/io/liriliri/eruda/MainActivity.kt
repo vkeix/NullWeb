@@ -41,6 +41,10 @@ import io.liriliri.eruda.store.SnippetStore
 // Browser
 import io.liriliri.eruda.browser.BrowserScreen
 
+// Tab
+import io.liriliri.eruda.tab.TabManager
+
+
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager
     private lateinit var searchHistory: SearchHistory
