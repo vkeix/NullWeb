@@ -105,19 +105,23 @@ class TabManager(private val webViewFactory: () -> WebView) {
         tab.webView.reload()
     }
 
-    fun groupTabs(aId: Long, bId: Long) {
+    fun createGroup(aId: Long, bId: Long, name: String, colorIndex: Int) {
         if (aId == bId) return
-        val tabs = _tabs.value
-        val a = tabs.firstOrNull { it.id == aId } ?: return
-        val b = tabs.firstOrNull { it.id == bId } ?: return
-
-        val groupId = a.groupId ?: b.groupId ?: System.currentTimeMillis()
-        if (_groups.value.none { it.id == groupId }) {
-            _groups.value = _groups.value + TabGroup(groupId, _groups.value.size)
-        }
-        _tabs.value = tabs.map { t ->
+        if (_tabs.value.none { it.id == aId } || _tabs.value.none { it.id == bId }) return
+        val groupId = System.currentTimeMillis()
+        _groups.value = _groups.value + TabGroup(groupId, name, colorIndex)
+        _tabs.value = _tabs.value.map { t ->
             if (t.id == aId || t.id == bId) t.copy(groupId = groupId) else t
         }
+        pruneGroups()
+    }
+
+    fun addToGroup(tabId: Long, groupId: Long) {
+        if (_groups.value.none { it.id == groupId }) return
+        _tabs.value = _tabs.value.map { t ->
+            if (t.id == tabId) t.copy(groupId = groupId) else t
+        }
+        pruneGroups()
     }
 
     fun dissolveGroup(groupId: Long) {
@@ -205,6 +209,7 @@ class TabManager(private val webViewFactory: () -> WebView) {
 
     data class TabGroup(
         val id: Long,
+        val name: String,
         val colorIndex: Int
     )
 
