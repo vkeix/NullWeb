@@ -4,16 +4,16 @@ plugins {
 }
 
 android {
-    namespace 'io.liriliri.eruda'
+    namespace 'dev.vkeix.nullweb'
     compileSdk 34
 
     defaultConfig {
-        applicationId "io.liriliri.eruda"
+        applicationId "dev.vkeix.nullweb"
         minSdk 21
         targetSdk 34
         versionCode 3
         versionName "1.0.2"
-        archivesBaseName = "eruda-v$versionName"
+        archivesBaseName = "v$versionName"
     }
 
     buildTypes {
