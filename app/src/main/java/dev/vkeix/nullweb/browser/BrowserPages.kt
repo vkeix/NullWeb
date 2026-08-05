@@ -1,12 +1,14 @@
-package io.liriliri.eruda.ui
+package dev.vkeix.nullweb.browser
 
 import android.os.Environment
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,14 +37,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.liriliri.eruda.store.BookmarkStore
-import io.liriliri.eruda.store.DownloadStore
-import io.liriliri.eruda.store.HistoryRanges
-import io.liriliri.eruda.store.HistoryStore
+import dev.vkeix.nullweb.store.BookmarkStore
+import dev.vkeix.nullweb.store.DownloadStore
+import dev.vkeix.nullweb.store.HistoryRanges
+import dev.vkeix.nullweb.store.HistoryStore
 import java.io.File
 
 @Composable

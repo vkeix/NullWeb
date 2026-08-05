@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

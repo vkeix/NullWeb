@@ -1,4 +1,4 @@
-package io.liriliri.eruda.ui
+package dev.vkeix.nullweb.browser
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.liriliri.eruda.TabManager
+import dev.vkeix.nullweb.tab.TabManager
 import kotlin.math.roundToInt
 
 private val GROUP_COLORS = listOf(

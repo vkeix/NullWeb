@@ -1,4 +1,4 @@
-package io.liriliri.eruda.store
+package dev.vkeix.nullweb.store
 
 import android.content.Context
 import org.json.JSONArray

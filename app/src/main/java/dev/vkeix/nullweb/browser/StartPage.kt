@@ -1,4 +1,4 @@
-package io.liriliri.eruda.ui
+package dev.vkeix.nullweb.browser
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

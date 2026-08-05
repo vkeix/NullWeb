@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -31,10 +31,19 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
 
-import io.liriliri.eruda.store.BookmarkStore
-import io.liriliri.eruda.store.DownloadStore
-import io.liriliri.eruda.store.HistoryStore
-import io.liriliri.eruda.store.SearchHistory
+// Store
+import dev.vkeix.nullweb.store.BookmarkStore
+import dev.vkeix.nullweb.store.DownloadStore
+import dev.vkeix.nullweb.store.HistoryStore
+import dev.vkeix.nullweb.store.SearchHistory
+import dev.vkeix.nullweb.store.SnippetStore
+
+// Browser
+import dev.vkeix.nullweb.browser.BrowserScreen
+
+// Tab
+import dev.vkeix.nullweb.tab.TabManager
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var tabManager: TabManager

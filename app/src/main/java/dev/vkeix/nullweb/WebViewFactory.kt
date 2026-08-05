@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb
 
 import android.annotation.SuppressLint
 import android.content.Context

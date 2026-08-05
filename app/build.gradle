@@ -4,27 +4,32 @@ plugins {
 }
 
 android {
-    namespace 'io.liriliri.eruda'
+    namespace 'dev.vkeix.nullweb'
     compileSdk 34
 
     defaultConfig {
-        applicationId "io.liriliri.eruda"
+        applicationId "dev.vkeix.nullweb"
         minSdk 21
         targetSdk 34
         versionCode 3
         versionName "1.0.2"
-        archivesBaseName = "eruda-v$versionName"
+        archivesBaseName = "v$versionName"
     }
-
-    buildTypes {
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            if (System.getenv("CI")) {
-                signingConfig signingConfigs.debug
-            }
-        }
-    }
+    signingConfigs {
+	    release {
+	        storeFile file("$rootDir/app/nullweb-release.jks")
+	        storePassword System.getenv("KEYSTORE_PASSWORD")
+	        keyAlias System.getenv("KEY_ALIAS")
+	        keyPassword System.getenv("KEY_PASSWORD")
+	    }
+	}
+	buildTypes {
+	    release {
+	        minifyEnabled true
+	        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+	        signingConfig signingConfigs.release
+	    }
+	}
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

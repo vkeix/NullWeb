@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb.browser
 
 import android.content.Intent
 import android.net.Uri
@@ -22,22 +22,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.liriliri.eruda.store.BookmarkStore
-import io.liriliri.eruda.store.DownloadStore
-import io.liriliri.eruda.store.HistoryStore
-import io.liriliri.eruda.store.SearchHistory
-import io.liriliri.eruda.ui.BookmarksScreen
-import io.liriliri.eruda.ui.BrowserMenuSheet
-import io.liriliri.eruda.ui.BrowserToolbar
-import io.liriliri.eruda.ui.DevToolsScreen
-import io.liriliri.eruda.ui.DownloadsScreen
-import io.liriliri.eruda.ui.HistoryScreen
-import io.liriliri.eruda.ui.SettingsScreen
-import io.liriliri.eruda.ui.StartPage
-import io.liriliri.eruda.ui.SuggestionOverlay
-import io.liriliri.eruda.ui.TabSwitcherOverlay
 import java.io.File
 import java.net.URLEncoder
+
+// URL helpers from root package (MainActivity.kt)
+import dev.vkeix.nullweb.isHttpUrl
+import dev.vkeix.nullweb.isFileUrl
+import dev.vkeix.nullweb.mayBeUrl
+
+// Root package
+import dev.vkeix.nullweb.BrowserPage
+import dev.vkeix.nullweb.BrowserViewModel
+import dev.vkeix.nullweb.DevToolsBus
+
+// Tab
+import dev.vkeix.nullweb.tab.TabManager
+
+// Store
+import dev.vkeix.nullweb.store.BookmarkStore
+import dev.vkeix.nullweb.store.DownloadStore
+import dev.vkeix.nullweb.store.HistoryStore
+import dev.vkeix.nullweb.store.SearchHistory
+import dev.vkeix.nullweb.store.SnippetStore
+
+// DevTools
+import dev.vkeix.nullweb.devtools.DevToolsScreen
 
 @Composable
 fun BrowserScreen(

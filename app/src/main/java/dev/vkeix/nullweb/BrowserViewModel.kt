@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

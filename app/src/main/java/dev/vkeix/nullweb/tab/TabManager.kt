@@ -1,4 +1,4 @@
-package io.liriliri.eruda
+package dev.vkeix.nullweb.tab
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
